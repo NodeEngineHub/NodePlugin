@@ -56,9 +56,9 @@ class NodePlugin : Plugin<Project> {
             val javaExt = project.extensions.getByType<JavaPluginExtension>()
 
 
-            javaExt.sourceCompatibility = JavaVersion.VERSION_22
-            javaExt.targetCompatibility = JavaVersion.VERSION_22
-            javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(22))
+            javaExt.sourceCompatibility = JavaVersion.VERSION_25
+            javaExt.targetCompatibility = JavaVersion.VERSION_25
+            javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 
             val dependencies = project.dependencies
             // Dependencies and versions
@@ -190,6 +190,32 @@ class NodePlugin : Plugin<Project> {
                         }
                     } else {
                         target.logger.lifecycle("No top-level 'gradle' directory found at: ${'$'}{sourceDir.absolutePath}")
+                    }
+                    val gradlewFile = target.rootProject.file("gradlew")
+                    if (gradlewFile.exists()) {
+                        target.gradle.includedBuilds.forEach { included ->
+                            if (!included.name.equals("build-logic")) {
+                                target.copy {
+                                    from(gradlewFile)
+                                    into(included.projectDir)
+                                }
+                            }
+                        }
+                    } else {
+                        target.logger.lifecycle("No top-level 'gradlew' file found at: ${'$'}{gradlewFile.absolutePath}")
+                    }
+                    val gradlewBatFile = target.rootProject.file("gradlew.bat")
+                    if (gradlewBatFile.exists()) {
+                        target.gradle.includedBuilds.forEach { included ->
+                            if (!included.name.equals("build-logic")) {
+                                target.copy {
+                                    from(gradlewBatFile)
+                                    into(included.projectDir)
+                                }
+                            }
+                        }
+                    } else {
+                        target.logger.lifecycle("No top-level 'gradlew' file found at: ${'$'}{gradlewBatFile.absolutePath}")
                     }
                 }
                 // Recurse into included builds so they copy into their own included builds
