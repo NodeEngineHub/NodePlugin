@@ -74,6 +74,8 @@ class NodePlugin : Plugin<Project> {
             dependencies.add("implementation", "com.uber.nullaway:nullaway-annotations:$nullawayVersion")
             dependencies.add("api", "org.jspecify:jspecify:1.0.0")
 
+            dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher:1.13.4")
+
             // JavaCompile tasks configuration incl. ErrorProne
             project.tasks.withType<JavaCompile>().configureEach {
                 options.isIncremental = true
@@ -100,6 +102,7 @@ class NodePlugin : Plugin<Project> {
             // Tests use JUnit Platform
             project.tasks.withType<Test>().configureEach {
                 useJUnitPlatform()
+                this.testLogging.events("passed", "skipped", "failed")
             }
 
             // Sources and Javadoc jars + resources for core
