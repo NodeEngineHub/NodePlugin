@@ -85,6 +85,9 @@ class NodePlugin : Plugin<Project> {
                     excludedPaths.set(".*/build/generated/.*")
                     check("NullAway", CheckSeverity.ERROR)
                     option("NullAway:AnnotatedPackages", "ca.fxco")
+                    option("NullAway:ExhaustiveOverride", true)
+                    option("NullAway:CheckOptionalEmptiness", true)
+                    option("NullAway:CheckContracts", true)
                     disable("UnnecessaryParentheses")
                 }
                 val n = name.lowercase(Locale.ROOT)
