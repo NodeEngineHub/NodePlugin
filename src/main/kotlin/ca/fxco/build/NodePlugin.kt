@@ -21,6 +21,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import java.util.*
+import proguard.gradle.ProGuardTask
 
 /**
  * A gradle plugin which applies shared gradle logic to all the modules.<br>
@@ -146,6 +147,107 @@ class NodePlugin : Plugin<Project> {
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
 
+            // ProGuard obfuscation task (safe defaults)
+            // Do NOT create this task for :api modules or for any project in the 'node-utils' build
+            val isApiModule = project.path.endsWith(":api")
+            val isNodeUtilsBuild = target.rootProject.projectDir.name.equals("node-utils", ignoreCase = true) ||
+                    target.rootProject.name.equals("NodeUtils", ignoreCase = true) ||
+                    target.rootProject.name.equals("node-utils", ignoreCase = true)
+            if (!isApiModule && !isNodeUtilsBuild) {
+                val proguardTask = project.tasks.register<ProGuardTask>("proguardObfuscate") {
+                    group = "build"
+                    description = "Obfuscate the compiled JAR with ProGuard"
+
+                    // Ensure classes are compiled and jar is built first
+                    dependsOn(project.tasks.named("jar"))
+
+                    // Also ensure API module jars are built so we can add them as libraryjars
+                    target.subprojects
+                        .filter { it.path.endsWith(":api") && it.path != project.path }
+                        .forEach { apiProj ->
+                            dependsOn(apiProj.tasks.named("jar"))
+                        }
+
+                    // Configure at execution time to resolve providers lazily
+                    doFirst {
+                        val jarTask = project.tasks.named<Jar>("jar").get()
+                        val inJar = jarTask.archiveFile.get().asFile
+                        val outJar = project.layout.buildDirectory.file("libs/${jarTask.archiveBaseName.get()}-${project.version}-obf.jar").get().asFile
+                        val mappingFile = project.layout.buildDirectory.file("outputs/proguard/mapping.txt").get().asFile
+                        mappingFile.parentFile.mkdirs()
+
+                        // In/out jars
+                        injars(inJar)
+                        outjars(outJar)
+                        printmapping(mappingFile)
+
+                        // Load configuration from file(s) if present; fall back to safe defaults
+                        val candidateNames = listOf("proguard-rules.pro", "proguard.pro", "proguard.conf", "proguard.cfg")
+                        val searchDirs = listOf(project.projectDir, project.rootProject.projectDir)
+                        val configFiles = mutableListOf<java.io.File>()
+                        for (dir in searchDirs) {
+                            for (name in candidateNames) {
+                                val f = java.io.File(dir, name)
+                                if (f.exists()) {
+                                    configFiles.add(f)
+                                }
+                            }
+                        }
+
+                        if (configFiles.isNotEmpty()) {
+                            configFiles.distinct().forEach { cfg ->
+                                // Include external config file directly
+                                configuration(cfg)
+                            }
+                        } else {
+                            throw IllegalStateException("Missing ProGuard configuration!")
+                        }
+
+                        // Only obfuscate by default to avoid hierarchy issues and empty outputs
+                        // - Many modules don't have explicit entry points; shrinking can remove everything
+                        // - Optimization can require full library hierarchies (e.g., optional Log4J2 in Netty)
+                        dontshrink()
+                        dontoptimize()
+
+                        // Add JDK as library jars (Java 9+ via jmods, else rt.jar)
+                        val javaHome = System.getProperty("java.home")
+                        val jmodsDir = java.io.File(javaHome, "jmods")
+                        if (jmodsDir.exists()) {
+                            jmodsDir.listFiles { f -> f.isFile && f.name.endsWith(".jmod") }?.forEach { jmod ->
+                                libraryjars(jmod)
+                            }
+                        } else {
+                            val rt = java.io.File(javaHome, "lib/rt.jar")
+                            if (rt.exists()) {
+                                libraryjars(rt)
+                            }
+                        }
+
+                        // Add project runtime classpath as library jars
+                        val runtime = project.configurations.getByName("runtimeClasspath").resolve()
+                        val libSet = mutableSetOf<String>()
+                        runtime.forEach { dep ->
+                            if (dep.exists() && libSet.add(dep.canonicalPath)) {
+                                libraryjars(dep)
+                            }
+                        }
+
+                        // Additionally include all API module jars from this build as libraryjars
+                        target.subprojects
+                            .filter { it.path.endsWith(":api") && it.path != project.path }
+                            .forEach { apiProj ->
+                                val apiJarTask = apiProj.tasks.named<Jar>("jar").get()
+                                val apiJar = apiJarTask.archiveFile.get().asFile
+                                if (apiJar.exists() && libSet.add(apiJar.canonicalPath)) {
+                                    libraryjars(apiJar)
+                                } else if (libSet.add(apiJar.absolutePath)) {
+                                    // Add even if not yet existing; the task dependency ensures it will exist by execution
+                                    libraryjars(apiJar)
+                                }
+                            }
+                    }
+                }
+            }
 
             // Additional subproject repositories
             project.repositories.mavenCentral()
@@ -168,8 +270,20 @@ class NodePlugin : Plugin<Project> {
             }
         }
 
-        // Root helper task to publish everything to mavenLocal
+        // Root helper tasks
         target.afterEvaluate {
+            // Aggregate obfuscation task across all subprojects and included builds
+            target.tasks.register("obfuscateAll") {
+                target.subprojects.forEach { sp ->
+                    sp.tasks.findByName("proguardObfuscate")?.let { dependsOn(it) }
+                }
+                target.gradle.includedBuilds.forEach { included ->
+                    if (!included.name.equals("build-logic")) {
+                        dependsOn(included.task(":obfuscateAll"))
+                    }
+                }
+            }
+
             target.tasks.register("publishAllToMavenLocal") {
                 target.subprojects.forEach { sp -> sp.tasks.named("publishToMavenLocal").let { t -> dependsOn(t) } }
                 target.gradle.includedBuilds.forEach { included ->
