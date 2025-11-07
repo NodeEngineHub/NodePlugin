@@ -278,7 +278,7 @@ class NodePlugin : Plugin<Project> {
                     sp.tasks.findByName("proguardObfuscate")?.let { dependsOn(it) }
                 }
                 target.gradle.includedBuilds.forEach { included ->
-                    if (!included.name.equals("build-logic")) {
+                    if (!included.name.equals("node-plugin")) {
                         dependsOn(included.task(":obfuscateAll"))
                     }
                 }
@@ -287,7 +287,7 @@ class NodePlugin : Plugin<Project> {
             target.tasks.register("publishAllToMavenLocal") {
                 target.subprojects.forEach { sp -> sp.tasks.named("publishToMavenLocal").let { t -> dependsOn(t) } }
                 target.gradle.includedBuilds.forEach { included ->
-                    if (!included.name.equals("build-logic")) {
+                    if (!included.name.equals("node-plugin")) {
                         dependsOn(included.task(":publishAllToMavenLocal"))
                     }
                 }
@@ -300,7 +300,7 @@ class NodePlugin : Plugin<Project> {
                     val sourceDir = target.rootProject.file("gradle")
                     if (sourceDir.exists()) {
                         target.gradle.includedBuilds.forEach { included ->
-                            if (!included.name.equals("build-logic")) {
+                            if (!included.name.equals("node-plugin")) {
                                 val destDir = java.io.File(included.projectDir, "gradle")
                                 target.copy {
                                     from(sourceDir)
@@ -314,7 +314,7 @@ class NodePlugin : Plugin<Project> {
                     val gradlewFile = target.rootProject.file("gradlew")
                     if (gradlewFile.exists()) {
                         target.gradle.includedBuilds.forEach { included ->
-                            if (!included.name.equals("build-logic")) {
+                            if (!included.name.equals("node-plugin")) {
                                 target.copy {
                                     from(gradlewFile)
                                     into(included.projectDir)
@@ -327,7 +327,7 @@ class NodePlugin : Plugin<Project> {
                     val gradlewBatFile = target.rootProject.file("gradlew.bat")
                     if (gradlewBatFile.exists()) {
                         target.gradle.includedBuilds.forEach { included ->
-                            if (!included.name.equals("build-logic")) {
+                            if (!included.name.equals("node-plugin")) {
                                 target.copy {
                                     from(gradlewBatFile)
                                     into(included.projectDir)
@@ -340,7 +340,7 @@ class NodePlugin : Plugin<Project> {
                 }
                 // Recurse into included builds so they copy into their own included builds
                 target.gradle.includedBuilds.forEach { included ->
-                    if (!included.name.equals("build-logic")) {
+                    if (!included.name.equals("node-plugin")) {
                         dependsOn(included.task(":copyGradleToIncludedBuilds"))
                     }
                 }
