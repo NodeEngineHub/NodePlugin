@@ -5,7 +5,7 @@ plugins {
     id("io.freefair.lombok") version "8.4"
 }
 
-group = "ca.fxco.build_logic"
+group = "ca.nodeengine.build_logic"
 
 repositories {
     mavenCentral()
@@ -33,7 +33,7 @@ gradlePlugin {
     plugins {
         register("nodePlugin") {
             id = "NodePlugin"
-            implementationClass = "ca.fxco.build.NodePlugin"
+            implementationClass = "ca.nodeengine.build.NodePlugin"
         }
     }
 }
