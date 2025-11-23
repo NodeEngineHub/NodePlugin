@@ -33,7 +33,7 @@ gradlePlugin {
     plugins {
         register("nodePlugin") {
             id = "NodePlugin"
-            implementationClass = "ca.nodeengine.build.NodePlugin"
+            implementationClass = "ca.nodeengine.plugin.NodePlugin"
         }
     }
 }
