@@ -63,11 +63,17 @@ class NodePlugin : Plugin<Project> {
             javaExt.targetCompatibility = JavaVersion.VERSION_25
             javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 
+            // Sources and Javadoc jars + resources for core
+            val isApi = project.name.contains("api")
+            val isCore = project.name.contains("core")
+
             val dependencies = project.dependencies
             // Dependencies and versions
-            val lombokVersion: String = target.providers.gradleProperty("lombokVersion").get()
-            dependencies.add("compileOnly", "org.projectlombok:lombok:$lombokVersion")
-            dependencies.add("annotationProcessor", "org.projectlombok:lombok:$lombokVersion")
+            if (!isApi && target.providers.gradleProperty("lombokVersion").isPresent) {
+                val lombokVersion: String = target.providers.gradleProperty("lombokVersion").get()
+                dependencies.add("compileOnly", "org.projectlombok:lombok:$lombokVersion")
+                dependencies.add("annotationProcessor", "org.projectlombok:lombok:$lombokVersion")
+            }
 
             val errorproneVersion: String = target.providers.gradleProperty("errorproneVersion").get()
             val nullawayVersion: String = target.providers.gradleProperty("nullawayVersion").get()
@@ -110,10 +116,6 @@ class NodePlugin : Plugin<Project> {
                 useJUnitPlatform()
                 this.testLogging.events("passed", "skipped", "failed")
             }
-
-            // Sources and Javadoc jars + resources for core
-            val isApi = project.name.contains("api")
-            val isCore = project.name.contains("core")
 
             javaExt.withSourcesJar()
             if (isApi) {
