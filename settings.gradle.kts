@@ -1,1 +1,1 @@
-rootProject.name = "node-plugin"
+rootProject.name = "NodePlugin"
