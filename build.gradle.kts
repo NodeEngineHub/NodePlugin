@@ -3,7 +3,7 @@ plugins {
     `java-gradle-plugin`
     `version-catalog`
     id("io.freefair.lombok") version "8.4"
-    id("com.vanniktech.maven.publish") version "0.35.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "ca.nodeengine.nodeplugin"
