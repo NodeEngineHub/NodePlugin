@@ -65,14 +65,13 @@ abstract class NodePluginExtension {
 
     /**
      * List of plugin IDs to exclude from copying Gradle files in copyGradleToIncludedBuilds.
-     * Default: ["node-plugin"]
+     * Default: ["NodePlugin"]
      */
     abstract val excludedIncludedBuilds: ListProperty<String>
 }
 
 /**
- * A gradle plugin which applies shared gradle logic to all the modules.<br>
- * TODO: We will need to throw this into a maven in order for the individual systems to work on their own.
+ * A gradle plugin which applies shared gradle logic to all the modules.
  *
  * @author FX
  */
@@ -210,103 +209,105 @@ class NodePlugin : Plugin<Project> {
             // ProGuard obfuscation task (safe defaults)
             val apiSuffix_pg = extension.apiProjectSuffix.get()
             val isApiModule = project.path.endsWith(":$apiSuffix_pg")
-            if (!isApi && !extension.useProguard.get()) {
-                project.tasks.register<ProGuardTask>("proguardObfuscate") {
-                    group = "build"
-                    description = "Obfuscate the compiled JAR with ProGuard"
+            if (extension.useProguard.get() && !isApiModule) {
+                if (project.tasks.findByName("proguardObfuscate") == null) {
+                    project.tasks.register<ProGuardTask>("proguardObfuscate") {
+                        group = "build"
+                        description = "Obfuscate the compiled JAR with ProGuard"
 
-                    // Ensure classes are compiled and jar is built first
-                    dependsOn(project.tasks.named("jar"))
+                        // Ensure classes are compiled and jar is built first
+                        dependsOn(project.tasks.named("jar"))
 
-                    // Also, ensure API module jars are built so we can add them as libraryjars
-                    target.subprojects
-                        .filter { it.path.endsWith(":$apiSuffix_pg") && it.path != project.path }
-                        .forEach { apiProj ->
-                            dependsOn(apiProj.tasks.named("jar"))
-                        }
-
-                    // Configure at execution time to resolve providers lazily
-                    doFirst {
-                        val jarTask = project.tasks.named<Jar>("jar").get()
-                        val inJar = jarTask.archiveFile.get().asFile
-                        val outJar = project.layout.buildDirectory
-                            .file("libs/${jarTask.archiveBaseName.get()}-${project.version}-obf.jar").get().asFile
-                        val mappingFile = project.layout.buildDirectory
-                            .file("outputs/proguard/mapping.txt").get().asFile
-                        mappingFile.parentFile.mkdirs()
-
-                        // In/out jars
-                        injars(inJar)
-                        outjars(outJar)
-                        printmapping(mappingFile)
-
-                        // Load configuration from file(s) if present; fall back to safe defaults
-                        val candidateNames = listOf(
-                            "proguard-rules.pro", "proguard.pro", "proguard.conf", "proguard.cfg"
-                        )
-                        val searchDirs = listOf(project.projectDir, project.rootProject.projectDir)
-                        val configFiles = mutableListOf<File>()
-                        for (dir in searchDirs) {
-                            for (name in candidateNames) {
-                                val f = File(dir, name)
-                                if (f.exists()) {
-                                    configFiles.add(f)
-                                }
-                            }
-                        }
-
-                        if (configFiles.isNotEmpty()) {
-                            configFiles.distinct().forEach { cfg ->
-                                // Include an external config file directly
-                                configuration(cfg)
-                            }
-                        } else {
-                            throw IllegalStateException("Missing ProGuard configuration!")
-                        }
-
-                        // Only obfuscate by default to avoid hierarchy issues and empty outputs
-                        // - Many modules don't have explicit entry points; shrinking can remove everything
-                        // - Optimization can require full library hierarchies (e.g., optional Log4J2 in Netty)
-                        dontshrink()
-                        dontoptimize()
-
-                        // Add JDK as library jars (Java 9+ via jmods, else rt.jar)
-                        val javaHome = System.getProperty("java.home")
-                        val jmodsDir = File(javaHome, "jmods")
-                        if (jmodsDir.exists()) {
-                            jmodsDir.listFiles { f -> f.isFile && f.name.endsWith(".jmod") }?.forEach { jmod ->
-                                libraryjars(jmod)
-                            }
-                        } else {
-                            val rt = File(javaHome, "lib/rt.jar")
-                            if (rt.exists()) {
-                                libraryjars(rt)
-                            }
-                        }
-
-                        // Add project runtime classpath as library jars
-                        val runtime = project.configurations.getByName("runtimeClasspath").resolve()
-                        val libSet = mutableSetOf<String>()
-                        runtime.forEach { dep ->
-                            if (dep.exists() && libSet.add(dep.canonicalPath)) {
-                                libraryjars(dep)
-                            }
-                        }
-
-                        // Additionally, include all API module jars from this build as libraryjars
+                        // Also, ensure API module jars are built so we can add them as libraryjars
                         target.subprojects
                             .filter { it.path.endsWith(":$apiSuffix_pg") && it.path != project.path }
                             .forEach { apiProj ->
-                                val apiJarTask = apiProj.tasks.named<Jar>("jar").get()
-                                val apiJar = apiJarTask.archiveFile.get().asFile
-                                if (apiJar.exists() && libSet.add(apiJar.canonicalPath)) {
-                                    libraryjars(apiJar)
-                                } else if (libSet.add(apiJar.absolutePath)) {
-                                    // Add even if not yet existing;
-                                    // The task dependency ensures it will exist by execution
-                                    libraryjars(apiJar)
+                                dependsOn(apiProj.tasks.named("jar"))
+                            }
+
+                        // Configure at execution time to resolve providers lazily
+                        doFirst {
+                            val jarTask = project.tasks.named<Jar>("jar").get()
+                            val inJar = jarTask.archiveFile.get().asFile
+                            val outJar = project.layout.buildDirectory
+                                .file("libs/${jarTask.archiveBaseName.get()}-${project.version}-obf.jar").get().asFile
+                            val mappingFile = project.layout.buildDirectory
+                                .file("outputs/proguard/mapping.txt").get().asFile
+                            mappingFile.parentFile.mkdirs()
+
+                            // In/out jars
+                            injars(inJar)
+                            outjars(outJar)
+                            printmapping(mappingFile)
+
+                            // Load configuration from file(s) if present; fall back to safe defaults
+                            val candidateNames = listOf(
+                                "proguard-rules.pro", "proguard.pro", "proguard.conf", "proguard.cfg"
+                            )
+                            val searchDirs = listOf(project.projectDir, project.rootProject.projectDir)
+                            val configFiles = mutableListOf<File>()
+                            for (dir in searchDirs) {
+                                for (name in candidateNames) {
+                                    val f = File(dir, name)
+                                    if (f.exists()) {
+                                        configFiles.add(f)
+                                    }
                                 }
                             }
+
+                            if (configFiles.isNotEmpty()) {
+                                configFiles.distinct().forEach { cfg ->
+                                    // Include an external config file directly
+                                    configuration(cfg)
+                                }
+                            } else {
+                                throw IllegalStateException("Missing ProGuard configuration!")
+                            }
+
+                            // Only obfuscate by default to avoid hierarchy issues and empty outputs
+                            // - Many modules don't have explicit entry points; shrinking can remove everything
+                            // - Optimization can require full library hierarchies (e.g., optional Log4J2 in Netty)
+                            dontshrink()
+                            dontoptimize()
+
+                            // Add JDK as library jars (Java 9+ via jmods, else rt.jar)
+                            val javaHome = System.getProperty("java.home")
+                            val jmodsDir = File(javaHome, "jmods")
+                            if (jmodsDir.exists()) {
+                                jmodsDir.listFiles { f -> f.isFile && f.name.endsWith(".jmod") }?.forEach { jmod ->
+                                    libraryjars(jmod)
+                                }
+                            } else {
+                                val rt = File(javaHome, "lib/rt.jar")
+                                if (rt.exists()) {
+                                    libraryjars(rt)
+                                }
+                            }
+
+                            // Add project runtime classpath as library jars
+                            val runtime = project.configurations.getByName("runtimeClasspath").resolve()
+                            val libSet = mutableSetOf<String>()
+                            runtime.forEach { dep ->
+                                if (dep.exists() && libSet.add(dep.canonicalPath)) {
+                                    libraryjars(dep)
+                                }
+                            }
+
+                            // Additionally, include all API module jars from this build as libraryjars
+                            target.subprojects
+                                .filter { it.path.endsWith(":$apiSuffix_pg") && it.path != project.path }
+                                .forEach { apiProj ->
+                                    val apiJarTask = apiProj.tasks.named<Jar>("jar").get()
+                                    val apiJar = apiJarTask.archiveFile.get().asFile
+                                    if (apiJar.exists() && libSet.add(apiJar.canonicalPath)) {
+                                        libraryjars(apiJar)
+                                    } else if (libSet.add(apiJar.absolutePath)) {
+                                        // Add even if not yet existing;
+                                        // The task dependency ensures it will exist by execution
+                                        libraryjars(apiJar)
+                                    }
+                                }
+                        }
                     }
                 }
             }

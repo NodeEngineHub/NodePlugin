@@ -4,7 +4,7 @@
 
 ## Configuration
 
-The plugin can be configured using the `nodePlugin` extension in your `build.gradle.kts` (or `build.gradle`) file.
+The plugin can be configured using the `nodePlugin` extension in your `build.gradle.kts` (or `build.gradle`) file. If you use all the default values, you can omit the `nodePlugin` block entirely.
 
 ### Example (Kotlin DSL)
 
