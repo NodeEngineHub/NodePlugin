@@ -3,10 +3,11 @@ plugins {
     `java-gradle-plugin`
     `version-catalog`
     id("io.freefair.lombok") version "8.4"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    `maven-publish`
+    id("org.jreleaser") version "1.16.0"
 }
 
-group = "ca.nodeengine.nodeplugin"
+group = "ca.nodeengine"
 version = "1.0.0"
 
 repositories {
@@ -40,33 +41,56 @@ gradlePlugin {
     }
 }
 
-mavenPublishing {
-    coordinates("ca.nodeengine", "NodePlugin", "1.0.0")
+publishing {
+    publications {
+        register<MavenPublication>("maven") {
+            from(components["java"])
+            groupId = "${project.group}"
+            artifactId = "${rootProject.name}"
+            version ="${project.version}"
 
-    pom {
-        name.set("NodePlugin")
-        description.set("A Gradle plugin for NodeEngine projects")
-        inceptionYear.set("2026")
-        url.set("https://github.com/NodeEngineHub/NodePlugin")
-        licenses {
-            license {
-                name.set("GNU Lesser General Public License v3.0")
-                url.set("https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE")
+            pom {
+                name.set("NodePlugin")
+                description.set("A Gradle plugin for NodeEngine projects")
+                inceptionYear.set("2026")
+                url.set("https://github.com/NodeEngineHub/NodePlugin")
+                licenses {
+                    license {
+                        name.set("GNU Lesser General Public License v3.0")
+                        url.set("https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("fxmorin")
+                        name.set("FX Morin")
+                        url.set("https://github.com/fxmorin/")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/NodeEngineHub/NodePlugin/")
+                    connection.set("scm:git:git://github.com/NodeEngineHub/NodePlugin.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git")
+                }
             }
-        }
-        developers {
-            developer {
-                id.set("fxmorin")
-                name.set("FX Morin")
-                url.set("https://github.com/fxmorin/")
-            }
-        }
-        scm {
-            url.set("https://github.com/NodeEngineHub/NodePlugin/")
-            connection.set("scm:git:git://github.com/NodeEngineHub/NodePlugin.git")
-            developerConnection.set("scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git")
         }
     }
-    publishToMavenCentral()
-    signAllPublications()
+}
+
+jreleaser {
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                register("sonatype") {
+                    active.set(org.jreleaser.model.Active.ALWAYS)
+                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    stagingRepository("build/staging-deploy")
+                }
+            }
+        }
+    }
 }
