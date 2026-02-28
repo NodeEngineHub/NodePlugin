@@ -86,6 +86,7 @@ publishing {
 
 jreleaser {
     project {
+        gitRootSearch = true
         description = "A Gradle plugin for NodeEngine projects"
         authors = listOf("Fx Morin")
         license = "LGPL 3.0"
@@ -111,6 +112,16 @@ jreleaser {
                     stagingRepository("build/staging-deploy")
                 }
             }
+        }
+    }
+    release {
+        github {
+            name = "${rootProject.name}"
+        }
+    }
+    if (!providers.environmentVariable("CI").isPresent) {
+        environment {
+            variables.set(file(System.getProperty("user.home") + "/.jreleaser/config.toml"))
         }
     }
 }
