@@ -1,3 +1,4 @@
+import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import java.time.LocalDate
 
 plugins {
@@ -41,6 +42,17 @@ gradlePlugin {
             implementationClass = "ca.nodeengine.plugin.NodePlugin"
         }
     }
+}
+
+tasks.register("createMissingDir") {
+    val dir = file("build/jreleaser")
+    if (!dir.exists()) {
+        mkdir(dir)
+    }
+}
+
+tasks.withType<JReleaserDeployTask>().configureEach {
+    dependsOn("createMissingDir")
 }
 
 publishing {
