@@ -1,3 +1,4 @@
+import com.gradle.publish.PublishTask
 import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import java.time.LocalDate
 
@@ -8,6 +9,7 @@ plugins {
     id("io.freefair.lombok") version "8.4"
     `maven-publish`
     id("org.jreleaser") version "1.16.0"
+    id("com.gradle.plugin-publish") version "2.0.0"
 }
 
 group = "ca.nodeengine"
@@ -41,33 +43,30 @@ dependencies {
 }
 
 gradlePlugin {
+    website.set("https://github.com/NodeEngineHub/NodePlugin")
+    vcsUrl.set("https://github.com/NodeEngineHub/NodePlugin")
     plugins {
         register("nodePlugin") {
-            id = "NodePlugin"
+            id = "ca.nodeengine.node-plugin"
+            displayName = "NodePlugin"
+            description = "A Gradle plugin for NodeEngine projects"
             implementationClass = "ca.nodeengine.plugin.NodePlugin"
+            tags.set(listOf("nodeengine"))
         }
     }
 }
 
-tasks.register("createMissingDir") {
-    val dir = file("build/jreleaser")
-    if (!dir.exists()) {
-        mkdir(dir)
-    }
-}
-
-tasks.withType<JReleaserDeployTask>().configureEach {
-    dependsOn("createMissingDir")
-}
-
 publishing {
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+        }
+    }
     publications {
-        register<MavenPublication>("maven") {
-            from(components["java"])
-            groupId = "${project.group}"
-            artifactId = "${rootProject.name}"
-            version ="${project.version}"
-
+        withType<MavenPublication>().configureEach {
+            if (name == "pluginMaven") {
+                artifactId = "node-plugin"
+            }
             pom {
                 name.set("NodePlugin")
                 description.set("A Gradle plugin for NodeEngine projects")
@@ -94,16 +93,10 @@ publishing {
             }
         }
     }
-    repositories {
-        maven {
-            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
-        }
-    }
 }
 
 jreleaser {
     project {
-        gitRootSearch = true
         description = "A Gradle plugin for NodeEngine projects"
         authors = listOf("Fx Morin")
         license = "LGPL 3.0"
@@ -141,4 +134,19 @@ jreleaser {
             variables.set(file(System.getProperty("user.home") + "/.jreleaser/config.toml"))
         }
     }
+}
+
+val createJReleaserOutputDir by tasks.registering {
+    val outputDir = layout.buildDirectory.dir("jreleaser")
+    outputs.dir(outputDir)
+    doLast {
+        val file = outputDir.get().asFile
+        if (!file.exists()) {
+            file.mkdirs()
+        }
+    }
+}
+
+tasks.withType<JReleaserDeployTask>().configureEach {
+    dependsOn(createJReleaserOutputDir)
 }
