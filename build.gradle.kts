@@ -1,4 +1,3 @@
-import com.gradle.publish.PublishTask
 import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import java.time.LocalDate
 
@@ -13,7 +12,7 @@ plugins {
 }
 
 group = "ca.nodeengine"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
