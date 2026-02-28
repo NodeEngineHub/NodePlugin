@@ -22,6 +22,11 @@ repositories {
 
 val nullawayVersion: String by project
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(gradleApi())
