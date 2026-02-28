@@ -18,7 +18,10 @@ jobs:
                   cache: 'gradle'
             - uses: gradle/actions/setup-gradle@v5
             - name: Publish to MavenCentral
-              run: ./gradlew publish jreleaserDeploy --no-configuration-cache
+              run: |
+                mkdir ./build/
+                mkdir ./build/jreleaser
+                ./gradlew publish jreleaserDeploy --no-configuration-cache
               env:
                   JRELEASER_SONATYPE_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
                   JRELEASER_SONATYPE_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
