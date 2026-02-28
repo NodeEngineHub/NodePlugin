@@ -1,3 +1,5 @@
+import java.time.LocalDate
+
 plugins {
     `kotlin-dsl`
     `java-gradle-plugin`
@@ -75,9 +77,27 @@ publishing {
             }
         }
     }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+        }
+    }
 }
 
 jreleaser {
+    project {
+        description = "A Gradle plugin for NodeEngine projects"
+        authors = listOf("Fx Morin")
+        license = "LGPL 3.0"
+        links {
+            homepage = "https://github.com/NodeEngineHub/NodePlugin/"
+            bugTracker = "https://github.com/NodeEngineHub/NodePlugin/issues"
+            contact = "https://nodeengine.ca/"
+        }
+        inceptionYear = "2026"
+        vendor = "FXCO Ltd."
+        copyright = "Copyright (c) ${LocalDate.now().year} FXCO Ltd."
+    }
     signing {
         active.set(org.jreleaser.model.Active.ALWAYS)
         armored.set(true)
