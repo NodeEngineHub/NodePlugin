@@ -7,7 +7,7 @@ plugins {
     `version-catalog`
     id("io.freefair.lombok") version "8.4"
     `maven-publish`
-    id("org.jreleaser") version "1.16.0"
+    id("org.jreleaser") version "1.23.0"
     id("com.gradle.plugin-publish") version "2.0.0"
 }
 
@@ -124,6 +124,7 @@ jreleaser {
                     active = org.jreleaser.model.Active.ALWAYS
                     url = "https://central.sonatype.com/api/v1/publisher"
                     stagingRepository("build/staging-deploy")
+                    skipPublicationCheck = true
                 }
             }
         }
