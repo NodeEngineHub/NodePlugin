@@ -62,12 +62,14 @@ publishing {
         }
     }
     publications {
-        withType<MavenPublication>().configureEach {
-            groupId = "$group"
-            if (name == "pluginMaven") {
-                artifactId = "node-plugin"
+        afterEvaluate {
+            withType<MavenPublication>().configureEach {
+                if (name == "pluginMaven") {
+                    artifactId = "node-plugin"
+                }
             }
-
+        }
+        withType<MavenPublication>().configureEach {
             pom {
                 name = "NodePlugin"
                 description = "A Gradle plugin for NodeEngine projects"
