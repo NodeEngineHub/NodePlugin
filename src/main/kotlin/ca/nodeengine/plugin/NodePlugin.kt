@@ -1,5 +1,8 @@
 package ca.nodeengine.plugin
 
+import ca.nodeengine.plugin.tasks.CopyGradleToIncludedBuildsTask
+import ca.nodeengine.plugin.tasks.DependsOnAllTask
+import ca.nodeengine.plugin.tasks.DeployModulesTask
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.JavaVersion
@@ -19,56 +22,11 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.*
-import org.gradle.kotlin.dsl.get
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import java.util.*
 import proguard.gradle.ProGuardTask
 import java.io.File
-import org.gradle.api.provider.Property
-import org.gradle.api.provider.ListProperty
-
-/**
- * Configuration extension for [NodePlugin].
- *
- * @author FX
- */
-abstract class NodePluginExtension {
-    /**
-     * The packages to be annotated for NullAway.
-     * Default: "ca.nodeengine"
-     */
-    abstract val annotatedPackages: Property<String>
-
-    /**
-     * The Java version to use for toolchain and compatibility.
-     * Default: 25
-     */
-    abstract val javaVersion: Property<Int>
-
-    /**
-     * The suffix used to identify API projects.
-     * Default: "api"
-     */
-    abstract val apiProjectSuffix: Property<String>
-
-    /**
-     * The suffix used to identify Core projects.
-     * Default: "core"
-     */
-    abstract val coreProjectSuffix: Property<String>
-
-    /**
-     * Whether this project should use proguard obfuscation.
-     * Default: true, except api projects.
-     */
-    abstract val useProguard: Property<Boolean>
-
-    /**
-     * List of plugin IDs to exclude from copying Gradle files in copyGradleToIncludedBuilds.
-     * Default: ["NodePlugin"]
-     */
-    abstract val excludedIncludedBuilds: ListProperty<String>
-}
+import kotlin.apply
 
 /**
  * A gradle plugin which applies shared gradle logic to all the modules.
@@ -77,15 +35,21 @@ abstract class NodePluginExtension {
  */
 class NodePlugin : Plugin<Project> {
 
-    override fun apply(target: Project) {
-        val extension = target.extensions.create<NodePluginExtension>("nodePlugin").apply {
+    private fun createExtension(target: Project): NodePluginExtension {
+        return target.extensions.create<NodePluginExtension>("nodePlugin").apply {
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
             coreProjectSuffix.convention("core")
             excludedIncludedBuilds.convention(listOf("NodePlugin"))
             useProguard.convention(true)
+            publishApi.convention(false)
+            publishCore.convention(false)
         }
+    }
+
+    override fun apply(target: Project) {
+        val extension = createExtension(target)
 
         // Repositories available at root for plugin resolution & common deps
         target.repositories.applyDefaultRepos()
@@ -119,8 +83,8 @@ class NodePlugin : Plugin<Project> {
             // Sources and Javadoc jars + resources for core
             val apiSuffix = extension.apiProjectSuffix.get()
             val coreSuffix = extension.coreProjectSuffix.get()
-            val isApi = project.name.contains(apiSuffix)
-            val isCore = project.name.contains(coreSuffix)
+            val isApi = project.name.endsWith(apiSuffix)
+            val isCore = project.name.endsWith(coreSuffix)
 
             val dependencies = project.dependencies
             // Dependencies and versions
@@ -145,8 +109,8 @@ class NodePlugin : Plugin<Project> {
                 options.isIncremental = true
                 options.encoding = "UTF-8"
                 options.errorprone {
-                    disableWarningsInGeneratedCode.set(true)
-                    excludedPaths.set(".*/build/generated/.*")
+                    disableWarningsInGeneratedCode = true
+                    excludedPaths = ".*/build/generated/.*"
                     check("NullAway", CheckSeverity.ERROR)
                     option("NullAway:AnnotatedPackages", extension.annotatedPackages.get())
                     option("NullAway:ExhaustiveOverride", true)
@@ -154,15 +118,16 @@ class NodePlugin : Plugin<Project> {
                     option("NullAway:CheckContracts", true)
                     disable("UnnecessaryParentheses")
                 }
-                val n = name.lowercase(Locale.ROOT)
-                if (n.contains("test")) {
-                    options.errorprone { disable("NullAway") }
+                if (name.lowercase(Locale.ROOT).contains("test")) {
+                    options.errorprone {
+                        disable("NullAway")
+                    }
                 }
             }
 
             // Jar base name
             project.tasks.withType<Jar>().configureEach {
-                archiveBaseName.set("${target.name}-${project.name}")
+                archiveBaseName = "${target.name}-${project.name}"
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
 
@@ -191,7 +156,7 @@ class NodePlugin : Plugin<Project> {
                 }
                 project.tasks.named<Javadoc>("javadoc").configure {
                     dependsOn(preprocess)
-                    setSource(project.fileTree(preprocess.map { it.destinationDir }))
+                    source = project.fileTree(preprocess.map { it.destinationDir })
                     classpath = sourceSets.getByName("main").compileClasspath
                 }
             } else if (isCore) {
@@ -207,9 +172,7 @@ class NodePlugin : Plugin<Project> {
             }
 
             // ProGuard obfuscation task (safe defaults)
-            val apiSuffix_pg = extension.apiProjectSuffix.get()
-            val isApiModule = project.path.endsWith(":$apiSuffix_pg")
-            if (extension.useProguard.get() && !isApiModule) {
+            if (extension.useProguard.get() && !isApi) {
                 if (project.tasks.findByName("proguardObfuscate") == null) {
                     project.tasks.register<ProGuardTask>("proguardObfuscate") {
                         group = "build"
@@ -220,7 +183,7 @@ class NodePlugin : Plugin<Project> {
 
                         // Also, ensure API module jars are built so we can add them as libraryjars
                         target.subprojects
-                            .filter { it.path.endsWith(":$apiSuffix_pg") && it.path != project.path }
+                            .filter { it.name.endsWith(apiSuffix) && it.path != project.path }
                             .forEach { apiProj ->
                                 dependsOn(apiProj.tasks.named("jar"))
                             }
@@ -295,7 +258,7 @@ class NodePlugin : Plugin<Project> {
 
                             // Additionally, include all API module jars from this build as libraryjars
                             target.subprojects
-                                .filter { it.path.endsWith(":$apiSuffix_pg") && it.path != project.path }
+                                .filter { it.name.endsWith(apiSuffix) && it.path != project.path }
                                 .forEach { apiProj ->
                                     val apiJarTask = apiProj.tasks.named<Jar>("jar").get()
                                     val apiJar = apiJarTask.archiveFile.get().asFile
@@ -312,20 +275,51 @@ class NodePlugin : Plugin<Project> {
                 }
             }
 
-            // Additional subproject repositories
-            project.repositories.mavenCentral()
-            project.repositories.mavenLocal()
-
             // Publishing configuration
             project.afterEvaluate {
-                project.extensions.configure<PublishingExtension> {
-                    publications {
-                        if (findByName("mavenJava") == null) {
-                            create<MavenPublication>("mavenJava") {
-                                from(project.components["java"])
-                                groupId = project.group.toString()
-                                artifactId = project.name
-                                version = project.version.toString()
+                val shouldPublishApi = isApi && extension.publishApi.get()
+                val shouldPublishCore = isCore && extension.publishCore.get()
+
+                if (shouldPublishApi || shouldPublishCore) {
+                    project.extensions.configure<PublishingExtension> {
+                        repositories {
+                            maven {
+                                url = project.layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+                            }
+                        }
+                        publications {
+                            afterEvaluate {
+                                withType<MavenPublication>().configureEach {
+                                    if (name == "pluginMaven") {
+                                        //artifactId = "node-plugin" // TODO: Get per-project extension to get override artifact id config
+                                    }
+                                }
+                            }
+                            withType<MavenPublication>().configureEach {
+                                pom {
+                                    name = "NodePlugin"
+                                    description = "A Gradle plugin for NodeEngine projects"
+                                    inceptionYear = "2026"
+                                    url = "https://github.com/NodeEngineHub/NodePlugin"
+                                    licenses {
+                                        license {
+                                            name = "GNU Lesser General Public License v3.0"
+                                            url = "https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE"
+                                        }
+                                    }
+                                    developers {
+                                        developer {
+                                            id = "fxmorin"
+                                            name = "FX Morin"
+                                            url = "https://github.com/FxMorin/"
+                                        }
+                                    }
+                                    scm {
+                                        url = "https://github.com/NodeEngineHub/NodePlugin/"
+                                        connection = "scm:git:git://github.com/NodeEngineHub/NodePlugin.git"
+                                        developerConnection = "scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git"
+                                    }
+                                }
                             }
                         }
                     }
@@ -335,81 +329,29 @@ class NodePlugin : Plugin<Project> {
 
         // Root helper tasks
         target.afterEvaluate {
-            val excludedBuilds = extension.excludedIncludedBuilds.get()
+            val excludedIncludedBuilds = extension.excludedIncludedBuilds.get()
 
-            // Aggregate obfuscation task across all subprojects and included builds
-            target.tasks.register("obfuscateAll") {
-                target.subprojects.forEach { sp ->
-                    sp.tasks.findByName("proguardObfuscate")?.let { dependsOn(it) }
-                }
-                target.gradle.includedBuilds.forEach { included ->
-                    if (included.name !in excludedBuilds) {
-                        dependsOn(included.task(":obfuscateAll"))
-                    }
-                }
+            target.tasks.register<DependsOnAllTask>("obfuscateAll") {
+                group = "other"
+                description = "Run proguard obfuscation in all projects"
+                taskName = "proguardObfuscate"
+                excludedBuilds = excludedIncludedBuilds
             }
 
-            target.tasks.register("publishAllToMavenLocal") {
-                target.subprojects.forEach { sp -> sp.tasks.named("publishToMavenLocal").let { t -> dependsOn(t) } }
-                target.gradle.includedBuilds.forEach { included ->
-                    if (included.name !in excludedBuilds) {
-                        dependsOn(included.task(":publishAllToMavenLocal"))
-                    }
-                }
+            target.tasks.register<DependsOnAllTask>("publishAllToMavenLocal") {
+                group = "other"
+                description = "Run publishToMavenLocal in all projects"
+                taskName = "publishToMavenLocal"
+                excludedBuilds = excludedIncludedBuilds
             }
 
             // Task to copy the top-level Gradle directory to all included builds recursively
-            target.tasks.register("copyGradleToIncludedBuilds") {
-                // Perform copy to each directly included build
-                doLast {
-                    val sourceDir = target.rootProject.file("gradle")
-                    if (sourceDir.exists()) {
-                        target.gradle.includedBuilds.forEach { included ->
-                            if (included.name !in excludedBuilds) {
-                                val destDir = File(included.projectDir, "gradle")
-                                target.copy {
-                                    from(sourceDir)
-                                    into(destDir)
-                                }
-                            }
-                        }
-                    } else {
-                        target.logger.lifecycle("No top-level 'gradle' directory found at: ${sourceDir.absolutePath}")
-                    }
-                    val gradlewFile = target.rootProject.file("gradlew")
-                    if (gradlewFile.exists()) {
-                        target.gradle.includedBuilds.forEach { included ->
-                            if (included.name !in excludedBuilds) {
-                                target.copy {
-                                    from(gradlewFile)
-                                    into(included.projectDir)
-                                }
-                            }
-                        }
-                    } else {
-                        target.logger.lifecycle("No top-level 'gradlew' file found at: ${gradlewFile.absolutePath}")
-                    }
-                    val gradlewBatFile = target.rootProject.file("gradlew.bat")
-                    if (gradlewBatFile.exists()) {
-                        target.gradle.includedBuilds.forEach { included ->
-                            if (included.name !in excludedBuilds) {
-                                target.copy {
-                                    from(gradlewBatFile)
-                                    into(included.projectDir)
-                                }
-                            }
-                        }
-                    } else {
-                        target.logger.lifecycle("No top-level 'gradlew' file found at: ${gradlewBatFile.absolutePath}")
-                    }
-                }
-                // Recurse into included builds so they copy into their own included builds
-                target.gradle.includedBuilds.forEach { included ->
-                    if (included.name !in excludedBuilds) {
-                        dependsOn(included.task(":copyGradleToIncludedBuilds"))
-                    }
-                }
+            target.tasks.register<CopyGradleToIncludedBuildsTask>("copyGradleToIncludedBuilds") {
+                excludedBuilds = excludedIncludedBuilds
             }
+
+            // Task to publish & deploy all modules with JReleaser
+            target.tasks.register<DeployModulesTask>("deployModules")
         }
     }
 }
