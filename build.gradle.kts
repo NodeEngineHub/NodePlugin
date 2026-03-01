@@ -50,7 +50,7 @@ gradlePlugin {
             displayName = "NodePlugin"
             description = "A Gradle plugin for NodeEngine projects"
             implementationClass = "ca.nodeengine.plugin.NodePlugin"
-            tags.set(listOf("nodeengine"))
+            tags = listOf("nodeengine")
         }
     }
 }
@@ -63,31 +63,33 @@ publishing {
     }
     publications {
         withType<MavenPublication>().configureEach {
+            groupId = "$group"
             if (name == "pluginMaven") {
                 artifactId = "node-plugin"
             }
+
             pom {
-                name.set("NodePlugin")
-                description.set("A Gradle plugin for NodeEngine projects")
-                inceptionYear.set("2026")
-                url.set("https://github.com/NodeEngineHub/NodePlugin")
+                name = "NodePlugin"
+                description = "A Gradle plugin for NodeEngine projects"
+                inceptionYear = "2026"
+                url = "https://github.com/NodeEngineHub/NodePlugin"
                 licenses {
                     license {
-                        name.set("GNU Lesser General Public License v3.0")
-                        url.set("https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE")
+                        name = "GNU Lesser General Public License v3.0"
+                        url = "https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE"
                     }
                 }
                 developers {
                     developer {
-                        id.set("fxmorin")
-                        name.set("FX Morin")
-                        url.set("https://github.com/fxmorin/")
+                        id = "fxmorin"
+                        name = "FX Morin"
+                        url = "https://github.com/FxMorin/"
                     }
                 }
                 scm {
-                    url.set("https://github.com/NodeEngineHub/NodePlugin/")
-                    connection.set("scm:git:git://github.com/NodeEngineHub/NodePlugin.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git")
+                    url = "https://github.com/NodeEngineHub/NodePlugin/"
+                    connection = "scm:git:git://github.com/NodeEngineHub/NodePlugin.git"
+                    developerConnection = "scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git"
                 }
             }
         }
@@ -96,6 +98,7 @@ publishing {
 
 jreleaser {
     project {
+        name = "NodePlugin"
         description = "A Gradle plugin for NodeEngine projects"
         authors = listOf("Fx Morin")
         license = "LGPL 3.0"
@@ -109,15 +112,15 @@ jreleaser {
         copyright = "Copyright (c) ${LocalDate.now().year} FXCO Ltd."
     }
     signing {
-        active.set(org.jreleaser.model.Active.ALWAYS)
-        armored.set(true)
+        active = org.jreleaser.model.Active.ALWAYS
+        armored = true
     }
     deploy {
         maven {
             mavenCentral {
                 register("sonatype") {
-                    active.set(org.jreleaser.model.Active.ALWAYS)
-                    url.set("https://central.sonatype.com/api/v1/publisher")
+                    active = org.jreleaser.model.Active.ALWAYS
+                    url = "https://central.sonatype.com/api/v1/publisher"
                     stagingRepository("build/staging-deploy")
                 }
             }
@@ -130,7 +133,7 @@ jreleaser {
     }
     if (!providers.environmentVariable("CI").isPresent) {
         environment {
-            variables.set(file(System.getProperty("user.home") + "/.jreleaser/config.toml"))
+            variables = file(System.getProperty("user.home") + "/.jreleaser/config.toml")
         }
     }
 }
