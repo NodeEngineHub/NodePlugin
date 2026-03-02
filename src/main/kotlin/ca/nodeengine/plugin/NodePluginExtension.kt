@@ -28,13 +28,7 @@ abstract class NodePluginExtension {
     abstract val apiProjectSuffix: Property<String>
 
     /**
-     * The suffix used to identify Core projects.<br>
-     * Default: `"core"`
-     */
-    abstract val coreProjectSuffix: Property<String>
-
-    /**
-     * Whether this project should use proguard obfuscation.<br>
+     * If this project should use proguard obfuscation.<br>
      * Default: `true`, except api projects.
      */
     abstract val useProguard: Property<Boolean>
@@ -46,14 +40,14 @@ abstract class NodePluginExtension {
     abstract val excludedIncludedBuilds: ListProperty<String>
 
     /**
-     * Whether this project should publish its API modules.<br>
-     * Default: `false`
+     * If this project should publish its API modules.<br>
+     * Default: `true`
      */
     abstract val publishApi: Property<Boolean>
 
     /**
-     * Whether this project should publish its Core modules.<br>
+     * If this project should publish its None-API modules.<br>
      * Default: `false`
      */
-    abstract val publishCore: Property<Boolean>
+    abstract val publishAll: Property<Boolean>
 }

@@ -40,22 +40,36 @@ class NodePlugin : Plugin<Project> {
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
-            coreProjectSuffix.convention("core")
             excludedIncludedBuilds.convention(listOf("NodePlugin"))
             useProguard.convention(true)
-            publishApi.convention(false)
-            publishCore.convention(false)
+            publishApi.convention(true)
+            publishAll.convention(false)
+        }
+    }
+
+    private fun createSubExtension(target: Project, rootExtension: NodePluginExtension): NodePluginSubExtension {
+        val apiSuffix = rootExtension.apiProjectSuffix.get()
+        val isApi = target.name.endsWith(apiSuffix)
+        return target.extensions.create<NodePluginSubExtension>("nodePlugin").apply {
+            includeSources.convention(true)
+            includeJavadoc.convention(isApi)
+            includeLombok.convention(!isApi)
+            includeAssets.convention(!isApi)
+            useProguard.convention(rootExtension.useProguard.get() && !isApi)
+            shouldPublish.convention(if (isApi) rootExtension.publishApi.get() else rootExtension.publishAll.get())
+            artifactId.convention("${target.rootProject.name}-${target.name}")
         }
     }
 
     override fun apply(target: Project) {
-        val extension = createExtension(target)
+        val rootExtension = createExtension(target)
 
         // Repositories available at root for plugin resolution & common deps
         target.repositories.applyDefaultRepos()
 
         // Apply to all subprojects (not the root)
         target.subprojects.forEach { project ->
+            val extension = createSubExtension(project, rootExtension)
             // Core plugins and repos
             project.pluginManager.apply("idea")
             project.pluginManager.apply("java-library")
@@ -63,117 +77,112 @@ class NodePlugin : Plugin<Project> {
             project.pluginManager.apply("io.freefair.lombok")
             project.pluginManager.apply("net.ltgt.errorprone")
 
-            project.repositories.applyDefaultRepos()
+            project.afterEvaluate {
+                project.repositories.applyDefaultRepos()
 
-            // IDEA configuration
-            val idea = project.extensions.getByType<IdeaModel>()
-            idea.module.apply {
-                outputDir = project.file("build/classes/java/main")
-                testOutputDir = project.file("build/classes/java/test")
-            }
-
-            // Java toolchain and compatibility
-            val javaExt = project.extensions.getByType<JavaPluginExtension>()
-
-            val jv = extension.javaVersion.get()
-            javaExt.sourceCompatibility = JavaVersion.toVersion(jv)
-            javaExt.targetCompatibility = JavaVersion.toVersion(jv)
-            javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(jv))
-
-            // Sources and Javadoc jars + resources for core
-            val apiSuffix = extension.apiProjectSuffix.get()
-            val coreSuffix = extension.coreProjectSuffix.get()
-            val isApi = project.name.endsWith(apiSuffix)
-            val isCore = project.name.endsWith(coreSuffix)
-
-            val dependencies = project.dependencies
-            // Dependencies and versions
-            if (!isApi && target.providers.gradleProperty("lombokVersion").isPresent) {
-                val lombokVersion: String = target.providers.gradleProperty("lombokVersion").get()
-                dependencies.add("compileOnly", "org.projectlombok:lombok:$lombokVersion")
-                dependencies.add("annotationProcessor", "org.projectlombok:lombok:$lombokVersion")
-            }
-
-            val errorproneVersion: String = target.providers.gradleProperty("errorproneVersion").get()
-            val nullawayVersion: String = target.providers.gradleProperty("nullawayVersion").get()
-            dependencies.add("errorprone", "com.google.errorprone:error_prone_core:$errorproneVersion")
-            dependencies.add("errorprone", "com.uber.nullaway:nullaway:$nullawayVersion")
-            dependencies.add("implementation", "com.google.errorprone:error_prone_annotations:$errorproneVersion")
-            dependencies.add("implementation", "com.uber.nullaway:nullaway-annotations:$nullawayVersion")
-            dependencies.add("api", "org.jspecify:jspecify:1.0.0")
-
-            dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher:1.13.4")
-
-            // JavaCompile tasks configuration incl. ErrorProne
-            project.tasks.withType<JavaCompile>().configureEach {
-                options.isIncremental = true
-                options.encoding = "UTF-8"
-                options.errorprone {
-                    disableWarningsInGeneratedCode = true
-                    excludedPaths = ".*/build/generated/.*"
-                    check("NullAway", CheckSeverity.ERROR)
-                    option("NullAway:AnnotatedPackages", extension.annotatedPackages.get())
-                    option("NullAway:ExhaustiveOverride", true)
-                    option("NullAway:CheckOptionalEmptiness", true)
-                    option("NullAway:CheckContracts", true)
-                    disable("UnnecessaryParentheses")
+                // IDEA configuration
+                val idea = project.extensions.getByType<IdeaModel>()
+                idea.module.apply {
+                    outputDir = project.file("build/classes/java/main")
+                    testOutputDir = project.file("build/classes/java/test")
                 }
-                if (name.lowercase(Locale.ROOT).contains("test")) {
+
+                // Java toolchain and compatibility
+                val javaExt = project.extensions.getByType<JavaPluginExtension>()
+
+                val jv = rootExtension.javaVersion.get()
+                javaExt.sourceCompatibility = JavaVersion.toVersion(jv)
+                javaExt.targetCompatibility = JavaVersion.toVersion(jv)
+                javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(jv))
+
+                val dependencies = project.dependencies
+                // Dependencies and versions
+                if (extension.includeLombok.get() && target.providers.gradleProperty("lombokVersion").isPresent) {
+                    val lombokVersion: String = target.providers.gradleProperty("lombokVersion").get()
+                    dependencies.add("compileOnly", "org.projectlombok:lombok:$lombokVersion")
+                    dependencies.add("annotationProcessor", "org.projectlombok:lombok:$lombokVersion")
+                }
+
+                val errorproneVersion: String = target.providers.gradleProperty("errorproneVersion").get()
+                val nullawayVersion: String = target.providers.gradleProperty("nullawayVersion").get()
+                dependencies.add("errorprone", "com.google.errorprone:error_prone_core:$errorproneVersion")
+                dependencies.add("errorprone", "com.uber.nullaway:nullaway:$nullawayVersion")
+                dependencies.add("implementation", "com.google.errorprone:error_prone_annotations:$errorproneVersion")
+                dependencies.add("implementation", "com.uber.nullaway:nullaway-annotations:$nullawayVersion")
+                dependencies.add("api", "org.jspecify:jspecify:1.0.0")
+
+                dependencies.add("testRuntimeOnly", "org.junit.platform:junit-platform-launcher:1.13.4")
+
+                // JavaCompile tasks configuration incl. ErrorProne
+                project.tasks.withType<JavaCompile>().configureEach {
+                    options.isIncremental = true
+                    options.encoding = "UTF-8"
                     options.errorprone {
-                        disable("NullAway")
+                        disableWarningsInGeneratedCode = true
+                        excludedPaths = ".*/build/generated/.*"
+                        check("NullAway", CheckSeverity.ERROR)
+                        option("NullAway:AnnotatedPackages", rootExtension.annotatedPackages.get())
+                        option("NullAway:ExhaustiveOverride", true)
+                        option("NullAway:CheckOptionalEmptiness", true)
+                        option("NullAway:CheckContracts", true)
+                        disable("UnnecessaryParentheses")
+                    }
+                    if (name.lowercase(Locale.ROOT).contains("test")) {
+                        options.errorprone {
+                            disable("NullAway")
+                        }
                     }
                 }
-            }
 
-            // Jar base name
-            project.tasks.withType<Jar>().configureEach {
-                archiveBaseName = "${target.name}-${project.name}"
-                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            }
+                // Jar base name
+                project.tasks.withType<Jar>().configureEach {
+                    archiveBaseName = extension.artifactId
+                    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                }
 
-            // Tests use JUnit Platform
-            project.tasks.withType<Test>().configureEach {
-                useJUnitPlatform()
-                this.testLogging.events("passed", "skipped", "failed")
-            }
+                // Tests use JUnit Platform
+                project.tasks.withType<Test>().configureEach {
+                    useJUnitPlatform()
+                    this.testLogging.events("passed", "skipped", "failed")
+                }
 
-            javaExt.withSourcesJar()
-            if (isApi) {
-                javaExt.withJavadocJar()
-            }
-
-            val sourceSets = project.extensions.getByType<SourceSetContainer>()
-            if (isApi) {
-                val preprocess = project.tasks.register<Copy>("preprocessJavadocSources") {
-                    from(sourceSets.getByName("main").allJava)
-                    into(project.layout.buildDirectory.dir("javadoc-preprocessed"))
-                    filter { line: String ->
-                        val t = line.trim()
-                        if (t.startsWith("*") || t.startsWith("/**") || t.startsWith("///")) {
-                            line.replace(Regex("""&(?![a-zA-Z#0-9]+;)"""), "&amp;")
-                        } else line
+                if (extension.includeSources.get()) {
+                    javaExt.withSourcesJar()
+                }
+                val sourceSets = project.extensions.getByType<SourceSetContainer>()
+                if (extension.includeJavadoc.get()) {
+                    javaExt.withJavadocJar()
+                    val preprocess = project.tasks.register<Copy>("preprocessJavadocSources") {
+                        from(sourceSets.getByName("main").allJava)
+                        into(project.layout.buildDirectory.dir("javadoc-preprocessed"))
+                        filter { line: String ->
+                            val t = line.trim()
+                            if (t.startsWith("*") || t.startsWith("/**") || t.startsWith("///")) {
+                                line.replace(Regex("""&(?![a-zA-Z#0-9]+;)"""), "&amp;")
+                            } else line
+                        }
+                    }
+                    project.tasks.named<Javadoc>("javadoc").configure {
+                        dependsOn(preprocess)
+                        source = project.fileTree(preprocess.map { it.destinationDir })
+                        classpath = sourceSets.getByName("main").compileClasspath
                     }
                 }
-                project.tasks.named<Javadoc>("javadoc").configure {
-                    dependsOn(preprocess)
-                    source = project.fileTree(preprocess.map { it.destinationDir })
-                    classpath = sourceSets.getByName("main").compileClasspath
+                if (extension.includeAssets.get()) {
+                    sourceSets.getByName("main").resources.srcDir("assets")
                 }
-            } else if (isCore) {
-                sourceSets.getByName("main").resources.srcDir("assets")
-            }
 
-            project.tasks.withType<Copy>().configureEach {
-                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            }
+                project.tasks.withType<Copy>().configureEach {
+                    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                }
 
-            project.tasks.withType<AbstractArchiveTask>().configureEach {
-                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            }
+                project.tasks.withType<AbstractArchiveTask>().configureEach {
+                    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                }
 
-            // ProGuard obfuscation task (safe defaults)
-            if (extension.useProguard.get() && !isApi) {
-                if (project.tasks.findByName("proguardObfuscate") == null) {
+                // ProGuard obfuscation task (safe defaults)
+                if (extension.useProguard.get() && project.tasks.findByName("proguardObfuscate") == null) {
+                    val apiSuffix = rootExtension.apiProjectSuffix.get()
                     project.tasks.register<ProGuardTask>("proguardObfuscate") {
                         group = "build"
                         description = "Obfuscate the compiled JAR with ProGuard"
@@ -273,14 +282,9 @@ class NodePlugin : Plugin<Project> {
                         }
                     }
                 }
-            }
 
-            // Publishing configuration
-            project.afterEvaluate {
-                val shouldPublishApi = isApi && extension.publishApi.get()
-                val shouldPublishCore = isCore && extension.publishCore.get()
-
-                if (shouldPublishApi || shouldPublishCore) {
+                // Publishing configuration
+                if (extension.shouldPublish.get()) {
                     project.extensions.configure<PublishingExtension> {
                         repositories {
                             maven {
@@ -290,12 +294,11 @@ class NodePlugin : Plugin<Project> {
                         publications {
                             afterEvaluate {
                                 withType<MavenPublication>().configureEach {
-                                    if (name == "pluginMaven") {
-                                        //artifactId = "node-plugin" // TODO: Get per-project extension to get override artifact id config
-                                    }
+                                    artifactId = extension.artifactId.get()
                                 }
                             }
                             withType<MavenPublication>().configureEach {
+                                artifactId = extension.artifactId.get()
                                 pom {
                                     name = "NodePlugin"
                                     description = "A Gradle plugin for NodeEngine projects"
@@ -329,7 +332,7 @@ class NodePlugin : Plugin<Project> {
 
         // Root helper tasks
         target.afterEvaluate {
-            val excludedIncludedBuilds = extension.excludedIncludedBuilds.get()
+            val excludedIncludedBuilds = rootExtension.excludedIncludedBuilds.get()
 
             target.tasks.register<DependsOnAllTask>("obfuscateAll") {
                 group = "other"
