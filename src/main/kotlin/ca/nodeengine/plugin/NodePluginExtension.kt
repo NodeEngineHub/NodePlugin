@@ -50,4 +50,10 @@ abstract class NodePluginExtension {
      * Default: `false`
      */
     abstract val publishAll: Property<Boolean>
+
+    /**
+     * If deployModules should use dryRun.<br>
+     * Default: `false`
+     */
+    abstract val dryRun: Property<Boolean>
 }

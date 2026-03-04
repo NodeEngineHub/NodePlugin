@@ -10,7 +10,7 @@ import java.io.File
  *
  * @author FX
  */
-class CopyGradleToIncludedBuildsTask : DefaultTask() {
+abstract class CopyGradleToIncludedBuildsTask : DefaultTask() {
 
     @Input
     var excludedBuilds: List<String> = emptyList()
@@ -18,6 +18,12 @@ class CopyGradleToIncludedBuildsTask : DefaultTask() {
     init {
         group = "other"
         description = "Copy the top-level Gradle directory to all included builds recursively"
+        // Recurse into included builds so they copy into their own included builds
+        project.gradle.includedBuilds.forEach { included ->
+            if (included.name !in excludedBuilds) {
+                dependsOn(included.task(":copyGradleToIncludedBuilds"))
+            }
+        }
     }
 
     @TaskAction
@@ -63,12 +69,6 @@ class CopyGradleToIncludedBuildsTask : DefaultTask() {
                 }
             } else {
                 project.logger.lifecycle("No top-level 'gradlew' file found at: ${gradlewBatFile.absolutePath}")
-            }
-        }
-        // Recurse into included builds so they copy into their own included builds
-        project.gradle.includedBuilds.forEach { included ->
-            if (included.name !in excludedBuilds) {
-                dependsOn(included.task(":copyGradleToIncludedBuilds"))
             }
         }
     }

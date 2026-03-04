@@ -3,6 +3,7 @@ package ca.nodeengine.plugin
 import ca.nodeengine.plugin.tasks.CopyGradleToIncludedBuildsTask
 import ca.nodeengine.plugin.tasks.DependsOnAllTask
 import ca.nodeengine.plugin.tasks.DeployModulesTask
+import ca.nodeengine.plugin.tasks.ListExtensionsTask
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.JavaVersion
@@ -44,6 +45,7 @@ class NodePlugin : Plugin<Project> {
             useProguard.convention(true)
             publishApi.convention(true)
             publishAll.convention(false)
+            dryRun.convention(false)
         }
     }
 
@@ -354,7 +356,19 @@ class NodePlugin : Plugin<Project> {
             }
 
             // Task to publish & deploy all modules with JReleaser
-            target.tasks.register<DeployModulesTask>("deployModules")
+            target.tasks.register<DeployModulesTask>("deployModules") {
+                dryRun = rootExtension.dryRun.get()
+            }
+
+            target.tasks.register<ListExtensionsTask>("listNodePluginSettings")
+
+            target.tasks.register<DependsOnAllTask>("listAllNodePluginSettings") {
+                group = "other"
+                description = "Run listNodePluginSettings in all builds"
+                taskName = "listNodePluginSettings"
+                excludedBuilds = excludedIncludedBuilds
+                onlyBuilds = true
+            }
         }
     }
 }
