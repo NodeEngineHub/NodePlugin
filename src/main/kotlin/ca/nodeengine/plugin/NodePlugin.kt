@@ -368,6 +368,10 @@ class NodePlugin : Plugin<Project> {
                 dryRun = rootExtension.dryRun.get()
             }
 
+            target.subprojects.forEach { subproject ->
+                subproject.tasks.register<ListExtensionsTask>("listNodePluginSettings")
+            }
+
             target.tasks.register<ListExtensionsTask>("listNodePluginSettings")
 
             target.tasks.register<DependsOnAllTask>("listAllNodePluginSettings") {

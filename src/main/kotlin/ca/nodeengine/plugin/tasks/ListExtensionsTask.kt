@@ -20,41 +20,38 @@ abstract class ListExtensionsTask : DefaultTask() {
 
     @TaskAction
     fun action() {
-        val rootProject = project.rootProject
-        println("\n--- NodePlugin Extension Settings for ${project.rootProject.displayName} ---")
+        val rootExt = project.extensions.findByType<NodePluginExtension>()
+        val subExt = project.extensions.findByType<NodePluginSubExtension>()
 
-        rootProject.allprojects.forEach { p ->
-            println("\nProject: ${p.path}")
-            
-            // Try to find the root extension (NodePluginExtension)
-            val rootExt = p.extensions.findByType<NodePluginExtension>()
-            if (rootExt != null) {
-                println("  [Root Extension Settings]")
-                println("    annotatedPackages: ${rootExt.annotatedPackages.orNull}")
-                println("    javaVersion: ${rootExt.javaVersion.orNull}")
-                println("    apiProjectSuffix: ${rootExt.apiProjectSuffix.orNull}")
-                println("    useProguard: ${rootExt.useProguard.orNull}")
-                println("    excludedIncludedBuilds: ${rootExt.excludedIncludedBuilds.orNull}")
-                println("    publishApi: ${rootExt.publishApi.orNull}")
-                println("    publishAll: ${rootExt.publishAll.orNull}")
-            }
+        if (rootExt == null && subExt == null) return
+        if (rootExt != null) {
+            println("\nRoot NodePlugin Settings for ${project.displayName}")
+        }
 
-            // Try to find the sub extension (NodePluginSubExtension)
-            val subExt = p.extensions.findByType<NodePluginSubExtension>()
-            if (subExt != null) {
-                println("  [Sub Extension Settings]")
-                println("    artifactId: ${subExt.artifactId.orNull}")
-                println("    includeSources: ${subExt.includeSources.orNull}")
-                println("    includeJavadoc: ${subExt.includeJavadoc.orNull}")
-                println("    includeLombok: ${subExt.includeLombok.orNull}")
-                println("    includeAssets: ${subExt.includeAssets.orNull}")
-                println("    useProguard: ${subExt.useProguard.orNull}")
-                println("    shouldPublish: ${subExt.shouldPublish.orNull}")
-            }
+        // Root extension (NodePluginExtension)
+        if (rootExt != null) {
+            println("  [Root Extension Settings]")
+            rootExt.defaultArtifactId.orNull?.let { println("    defaultArtifactId: $it") }
+            rootExt.annotatedPackages.orNull?.let { println("    annotatedPackages: $it") }
+            rootExt.javaVersion.orNull?.let { println("    javaVersion: $it") }
+            rootExt.apiProjectSuffix.orNull?.let { println("    apiProjectSuffix: $it") }
+            rootExt.useProguard.orNull?.let { println("    useProguard: $it") }
+            rootExt.excludedIncludedBuilds.orNull?.let { if (it.isNotEmpty()) println("    excludedIncludedBuilds: $it") }
+            rootExt.publishApi.orNull?.let { println("    publishApi: $it") }
+            rootExt.publishAll.orNull?.let { println("    publishAll: $it") }
+            rootExt.dryRun.orNull?.let { println("    dryRun: $it") }
+        }
 
-            if (rootExt == null && subExt == null) {
-                println("  No NodePlugin extension found.")
-            }
+        // Sub extension (NodePluginSubExtension)
+        if (subExt != null) {
+            println("  [Sub Extension Settings] (${project.displayName})")
+            subExt.artifactId.orNull?.let { println("    artifactId: $it") }
+            subExt.includeSources.orNull?.let { println("    includeSources: $it") }
+            subExt.includeJavadoc.orNull?.let { println("    includeJavadoc: $it") }
+            subExt.includeLombok.orNull?.let { println("    includeLombok: $it") }
+            subExt.includeAssets.orNull?.let { println("    includeAssets: $it") }
+            subExt.useProguard.orNull?.let { println("    useProguard: $it") }
+            subExt.shouldPublish.orNull?.let { println("    shouldPublish: $it") }
         }
     }
 }

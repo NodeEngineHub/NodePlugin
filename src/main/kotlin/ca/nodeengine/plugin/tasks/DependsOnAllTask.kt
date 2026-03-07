@@ -51,6 +51,9 @@ abstract class DependsOnAllTask : DefaultTask() {
                     allProjects.add(included.name)
                 }
             }
+            project.tasks.findByName(taskName)?.let {
+                deps.add(it)
+            }
             deps
         })
     }
