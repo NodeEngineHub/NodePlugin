@@ -38,6 +38,11 @@ class NodePlugin : Plugin<Project> {
 
     private fun createExtension(target: Project): NodePluginExtension {
         return target.extensions.create<NodePluginExtension>("nodePlugin").apply {
+            if (target.name == target.rootProject.name) {
+                defaultArtifactId.convention("|target|")
+            } else {
+                defaultArtifactId.convention("|root|-|target|")
+            }
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
@@ -59,7 +64,10 @@ class NodePlugin : Plugin<Project> {
             includeAssets.convention(!isApi)
             useProguard.convention(rootExtension.useProguard.get() && !isApi)
             shouldPublish.convention(if (isApi) rootExtension.publishApi.get() else rootExtension.publishAll.get())
-            artifactId.convention("${target.rootProject.name}-${target.name}")
+            var defaultArtifactId = rootExtension.defaultArtifactId.get()
+            defaultArtifactId = defaultArtifactId.replace("|root|", target.rootProject.name)
+            defaultArtifactId = defaultArtifactId.replace("|target|", target.name)
+            artifactId.convention(defaultArtifactId)
         }
     }
 
