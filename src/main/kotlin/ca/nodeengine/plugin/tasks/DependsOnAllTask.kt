@@ -2,7 +2,6 @@ package ca.nodeengine.plugin.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.TaskAction
 
 /**
  * This task acts as a DependsOn across all projects, subprojects, and included builds.<br>
@@ -24,18 +23,32 @@ abstract class DependsOnAllTask : DefaultTask() {
 
     init {
         // Use a lazy provider for dependencies to avoid "after task has started execution" error
+        val allProjects = mutableListOf<String>()
         dependsOn(project.provider {
             val deps = mutableListOf<Any>()
             if (!onlyBuilds) {
                 project.subprojects.forEach { sp ->
-                    sp.tasks.findByName(taskName)?.let {
-                        deps.add(it)
+                    if (!allProjects.contains(sp.name)) {
+                        sp.tasks.findByName(taskName)?.let {
+                            deps.add(it)
+                        }
+                        allProjects.add(sp.name)
                     }
                 }
             }
             project.gradle.includedBuilds.forEach { included ->
-                if (included.name !in excludedBuilds) {
-                    deps.add(included.task(":${name}"))
+                // Check if the included build is a child of the current project based on its path
+                val isChild = try {
+                    val projectPath = project.projectDir.toPath().toAbsolutePath().normalize()
+                    val includedPath = included.projectDir.toPath().toAbsolutePath().normalize()
+                    includedPath.startsWith(projectPath) && includedPath != projectPath
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (isChild && !allProjects.contains(included.name) && included.name !in excludedBuilds) {
+                    deps.add(included.task(":${taskName}"))
+                    allProjects.add(included.name)
                 }
             }
             deps

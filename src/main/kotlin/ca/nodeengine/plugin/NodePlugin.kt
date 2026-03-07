@@ -367,7 +367,7 @@ class NodePlugin : Plugin<Project> {
                 description = "Run listNodePluginSettings in all builds"
                 taskName = "listNodePluginSettings"
                 excludedBuilds = excludedIncludedBuilds
-                onlyBuilds = true
+                onlyBuilds = false
             }
         }
     }
