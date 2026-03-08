@@ -373,14 +373,6 @@ class NodePlugin : Plugin<Project> {
             }
 
             target.tasks.register<ListExtensionsTask>("listNodePluginSettings")
-
-            target.tasks.register<DependsOnAllTask>("listAllNodePluginSettings") {
-                group = "other"
-                description = "Run listNodePluginSettings in all builds"
-                taskName = "listNodePluginSettings"
-                excludedBuilds = excludedIncludedBuilds
-                onlyBuilds = false
-            }
         }
     }
 }
