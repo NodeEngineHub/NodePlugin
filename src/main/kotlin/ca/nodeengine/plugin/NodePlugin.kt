@@ -38,11 +38,8 @@ class NodePlugin : Plugin<Project> {
 
     private fun createExtension(target: Project): NodePluginExtension {
         return target.extensions.create<NodePluginExtension>("nodePlugin").apply {
-            if (target.name == target.rootProject.name) {
-                defaultArtifactId.convention("|target|")
-            } else {
-                defaultArtifactId.convention("|root|-|target|")
-            }
+            rootArtifactId.convention(target.rootProject.name)
+            defaultArtifactId.convention("|root|-|target|")
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
@@ -58,16 +55,14 @@ class NodePlugin : Plugin<Project> {
         val apiSuffix = rootExtension.apiProjectSuffix.get()
         val isApi = target.name.endsWith(apiSuffix)
         return target.extensions.create<NodePluginSubExtension>("nodePlugin").apply {
+            rootArtifactId.convention(rootExtension.rootArtifactId)
+            defaultArtifactId.convention(rootExtension.defaultArtifactId)
             includeSources.convention(true)
             includeJavadoc.convention(isApi)
             includeLombok.convention(!isApi)
             includeAssets.convention(!isApi)
             useProguard.convention(rootExtension.useProguard.map { it && !isApi })
             shouldPublish.convention(if (isApi) rootExtension.publishApi else rootExtension.publishAll)
-            var defaultArtifactId = rootExtension.defaultArtifactId.get()
-            defaultArtifactId = defaultArtifactId.replace("|root|", target.rootProject.name)
-            defaultArtifactId = defaultArtifactId.replace("|target|", target.name)
-            artifactId.convention(defaultArtifactId)
         }
     }
 
@@ -146,7 +141,7 @@ class NodePlugin : Plugin<Project> {
 
                 // Jar base name
                 project.tasks.withType<Jar>().configureEach {
-                    archiveBaseName = extension.artifactId
+                    archiveBaseName = extension.getArtifactId(project)
                     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 }
 
@@ -304,11 +299,11 @@ class NodePlugin : Plugin<Project> {
                         publications {
                             afterEvaluate {
                                 withType<MavenPublication>().configureEach {
-                                    artifactId = extension.artifactId.get()
+                                    artifactId = extension.getArtifactId(project)
                                 }
                             }
                             withType<MavenPublication>().configureEach {
-                                artifactId = extension.artifactId.get()
+                                artifactId = extension.getArtifactId(project)
                                 pom {
                                     name = "NodePlugin"
                                     description = "A Gradle plugin for NodeEngine projects"

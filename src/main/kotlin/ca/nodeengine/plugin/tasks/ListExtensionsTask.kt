@@ -31,6 +31,7 @@ abstract class ListExtensionsTask : DefaultTask() {
         // Root extension (NodePluginExtension)
         if (rootExt != null) {
             println("  [Root Extension Settings]")
+            rootExt.rootArtifactId.orNull?.let { println("    rootArtifactId: $it") }
             rootExt.defaultArtifactId.orNull?.let { println("    defaultArtifactId: $it") }
             rootExt.annotatedPackages.orNull?.let { println("    annotatedPackages: $it") }
             rootExt.javaVersion.orNull?.let { println("    javaVersion: $it") }
@@ -45,7 +46,8 @@ abstract class ListExtensionsTask : DefaultTask() {
         // Sub extension (NodePluginSubExtension)
         if (subExt != null) {
             println("  [Sub Extension Settings] (${project.displayName})")
-            subExt.artifactId.orNull?.let { println("    artifactId: $it") }
+            subExt.rootArtifactId.orNull?.let { println("    rootArtifactId: $it") }
+            println("    artifactId: ${subExt.getArtifactId(project)}")
             subExt.includeSources.orNull?.let { println("    includeSources: $it") }
             subExt.includeJavadoc.orNull?.let { println("    includeJavadoc: $it") }
             subExt.includeLombok.orNull?.let { println("    includeLombok: $it") }

@@ -9,6 +9,13 @@ import org.gradle.api.provider.Property
  * @author FX
  */
 abstract class NodePluginExtension {
+
+    /**
+     * The root artifact ID for this project.<br>
+     * By default, it will be the root project name.
+     */
+    abstract val rootArtifactId: Property<String>
+
     /**
      * The default artifact ID format for this project.<br>
      * Use `|root|` for the root name, and `|target|` for the target name.<br>

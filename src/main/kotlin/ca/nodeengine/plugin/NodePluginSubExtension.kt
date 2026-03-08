@@ -1,6 +1,8 @@
 package ca.nodeengine.plugin
 
+import org.gradle.api.Project
 import org.gradle.api.provider.Property
+import kotlin.text.replace
 
 /**
  * This is an extension for subprojects, where a [NodePluginExtension] is already provided in the root project.<br>
@@ -9,6 +11,19 @@ import org.gradle.api.provider.Property
  * @author FX
  */
 abstract class NodePluginSubExtension {
+
+    /**
+     * The artifact id of the root parent.
+     */
+    abstract val rootArtifactId: Property<String>
+
+    /**
+     * The default artifact ID format provided by the root project.<br>
+     * Use `|root|` for the root name, and `|target|` for the target name.<br>
+     * By default, it will be `|root|-|target|`<br>
+     * If the artifact id is set, it will override this default.
+     */
+    abstract val defaultArtifactId: Property<String>
 
     /**
      * Determines if this project should include a Sources Jar<br>
@@ -47,4 +62,14 @@ abstract class NodePluginSubExtension {
      * Default: `project.name`
      */
     abstract val artifactId: Property<String>
+
+    fun getArtifactId(target: Project): String {
+        if (artifactId.isPresent) {
+            return artifactId.get()
+        }
+        var defaultArtifactId = defaultArtifactId.get()
+        defaultArtifactId = defaultArtifactId.replace("|root|", rootArtifactId.get())
+        defaultArtifactId = defaultArtifactId.replace("|target|", target.name)
+        return defaultArtifactId
+    }
 }
