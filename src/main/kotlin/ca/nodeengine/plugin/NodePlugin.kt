@@ -79,10 +79,14 @@ class NodePlugin : Plugin<Project> {
             project.pluginManager.apply("idea")
             project.pluginManager.apply("java-library")
             project.pluginManager.apply("maven-publish")
-            project.pluginManager.apply("io.freefair.lombok")
             project.pluginManager.apply("net.ltgt.errorprone")
 
             project.afterEvaluate {
+
+                if (extension.includeLombok.get()) {
+                    project.pluginManager.apply("io.freefair.lombok")
+                }
+
                 project.repositories.applyDefaultRepos()
 
                 // IDEA configuration
