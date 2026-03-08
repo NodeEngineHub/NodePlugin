@@ -1,5 +1,7 @@
 package ca.nodeengine.plugin
 
+import ca.nodeengine.plugin.extension.NodePluginExtension
+import ca.nodeengine.plugin.extension.NodePluginSubExtension
 import ca.nodeengine.plugin.tasks.CopyGradleToIncludedBuildsTask
 import ca.nodeengine.plugin.tasks.DependsOnAllTask
 import ca.nodeengine.plugin.tasks.DeployModulesTask

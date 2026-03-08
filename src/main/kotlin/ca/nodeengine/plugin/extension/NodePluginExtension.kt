@@ -1,10 +1,10 @@
-package ca.nodeengine.plugin
+package ca.nodeengine.plugin.extension
 
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 
 /**
- * Configuration extension for [NodePlugin].
+ * Configuration extension for [ca.nodeengine.plugin.NodePlugin].
  *
  * @author FX
  */

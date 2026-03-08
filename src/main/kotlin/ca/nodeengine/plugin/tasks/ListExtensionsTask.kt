@@ -1,7 +1,7 @@
 package ca.nodeengine.plugin.tasks
 
-import ca.nodeengine.plugin.NodePluginExtension
-import ca.nodeengine.plugin.NodePluginSubExtension
+import ca.nodeengine.plugin.extension.NodePluginExtension
+import ca.nodeengine.plugin.extension.NodePluginSubExtension
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.findByType
