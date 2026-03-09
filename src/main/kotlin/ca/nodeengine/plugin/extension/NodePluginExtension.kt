@@ -19,7 +19,7 @@ abstract class NodePluginExtension {
     /**
      * The default artifact ID format for this project.<br>
      * Use `|root|` for the root name, and `|target|` for the target name.<br>
-     * By default, it will be `|root|-|target|`<br>
+     * By default, it will be `|target|`<br>
      * If the sub extension sets an artifact id, it will override this default.
      */
     abstract val defaultArtifactId: Property<String>

@@ -41,7 +41,7 @@ class NodePlugin : Plugin<Project> {
     private fun createExtension(target: Project): NodePluginExtension {
         return target.extensions.create<NodePluginExtension>("nodePlugin").apply {
             rootArtifactId.convention(target.rootProject.name)
-            defaultArtifactId.convention("|root|-|target|")
+            defaultArtifactId.convention("|target|")
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
