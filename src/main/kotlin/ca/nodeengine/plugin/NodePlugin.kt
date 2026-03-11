@@ -12,7 +12,10 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.ivy.IvyPublication
+import org.gradle.api.publish.ivy.internal.publication.IvyModuleDescriptorSpecInternal
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -28,6 +31,7 @@ import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import proguard.gradle.ProGuardTask
 import java.io.File
 import java.util.*
+import kotlin.collections.forEach
 
 /**
  * A gradle plugin which applies shared gradle logic to all the modules.
@@ -311,6 +315,9 @@ class NodePlugin : Plugin<Project> {
                     }
 
                     project.extensions.configure<JReleaserExtension> {
+                        project {
+                            setJReleaserDefaultsFromPublishing(project, this)
+                        }
                         release {
                             github {
                                 enabled = true
@@ -374,6 +381,70 @@ class NodePlugin : Plugin<Project> {
             }
 
             target.tasks.register<ListExtensionsTask>("listNodePluginSettings")
+        }
+    }
+}
+
+private fun setJReleaserDefaultsFromPublishing(project: Project,
+                                               jreleaserProject: org.jreleaser.gradle.plugin.dsl.project.Project) {
+    project.extensions.getByType(PublishingExtension::class).publications.forEach { pub ->
+        if (pub is MavenPublication) {
+            if (!jreleaserProject.name.isPresent) {
+                jreleaserProject.name.convention(pub.pom.name)
+            }
+            if (!jreleaserProject.description.isPresent) {
+                jreleaserProject.description.convention(pub.pom.description)
+            }
+            val pom = pub.pom
+            if (pom is MavenPomInternal) {
+                val license = pom.licenses.first()
+                if (!jreleaserProject.license.isPresent) {
+                    jreleaserProject.license.convention(license.name)
+                }
+                if (!jreleaserProject.links.license.isPresent) {
+                    jreleaserProject.links.license.convention(license.url)
+                }
+                if (!jreleaserProject.authors.isPresent) {
+                    jreleaserProject.authors.convention(project.provider { pom.developers
+                        .map { developer -> developer.name.get() } })
+                }
+                if (!jreleaserProject.links.vcsBrowser.isPresent) {
+                    pom.scm?.let {
+                        jreleaserProject.links.vcsBrowser.convention(it.url)
+                    }
+                }
+                if (!jreleaserProject.links.bugTracker.isPresent) {
+                    pom.issueManagement?.let {
+                        jreleaserProject.links.bugTracker.convention(it.url)
+                    }
+                }
+                if (!jreleaserProject.links.homepage.isPresent) {
+                    pom.organization?.let {
+                        jreleaserProject.links.homepage.convention(it.url)
+                    }
+                }
+            }
+            if (!jreleaserProject.inceptionYear.isPresent) {
+                jreleaserProject.inceptionYear.convention(pub.pom.inceptionYear)
+            }
+        } else if (pub is IvyPublication) {
+            if (!jreleaserProject.name.isPresent) {
+                jreleaserProject.name.convention(pub.name)
+            }
+            val descriptor = pub.descriptor
+            if (descriptor is IvyModuleDescriptorSpecInternal) {
+                if (!jreleaserProject.authors.isPresent) {
+                    jreleaserProject.authors.convention(project.provider { descriptor.authors
+                        .map { developer -> developer.name.get() } })
+                }
+                val license = descriptor.licenses.first()
+                if (!jreleaserProject.license.isPresent) {
+                    jreleaserProject.license.convention(license.name)
+                }
+                if (!jreleaserProject.links.license.isPresent) {
+                    jreleaserProject.links.license.convention(license.url)
+                }
+            }
         }
     }
 }
