@@ -77,8 +77,10 @@ class NodePlugin : Plugin<Project> {
         // Repositories available at root for plugin resolution & common deps
         target.repositories.applyDefaultRepos()
 
-        if (rootExtension.includeRootProject.get()) {
-            includeProject(target, rootExtension, target)
+        target.afterEvaluate {
+            if (rootExtension.includeRootProject.get()) {
+                includeProject(target, rootExtension, target)
+            }
         }
 
         // Apply to all subprojects (not the root)
@@ -362,6 +364,10 @@ class NodePlugin : Plugin<Project> {
                 project.extensions.configure<JReleaserExtension> {
                     project {
                         setJReleaserDefaultsFromPublishing(project, this)
+                    }
+                    signing {
+                        active = org.jreleaser.model.Active.ALWAYS
+                        armored = true
                     }
                     release {
                         github {
