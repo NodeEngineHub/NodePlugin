@@ -58,7 +58,7 @@ class NodePlugin : Plugin<Project> {
     private fun createSubExtension(target: Project, rootExtension: NodePluginExtension): NodePluginSubExtension {
         val apiSuffix = rootExtension.apiProjectSuffix.get()
         val isApi = target.name.endsWith(apiSuffix)
-        return target.extensions.create<NodePluginSubExtension>("nodePlugin").apply {
+        return target.extensions.create<NodePluginSubExtension>("subNodePlugin").apply {
             rootArtifactId.convention(rootExtension.rootArtifactId)
             defaultArtifactId.convention(rootExtension.defaultArtifactId)
             includeSources.convention(true)
