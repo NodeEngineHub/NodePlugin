@@ -2,10 +2,7 @@ package ca.nodeengine.plugin
 
 import ca.nodeengine.plugin.extension.NodePluginExtension
 import ca.nodeengine.plugin.extension.NodePluginSubExtension
-import ca.nodeengine.plugin.tasks.CopyGradleToIncludedBuildsTask
-import ca.nodeengine.plugin.tasks.DependsOnAllTask
-import ca.nodeengine.plugin.tasks.DeployModulesTask
-import ca.nodeengine.plugin.tasks.ListExtensionsTask
+import ca.nodeengine.plugin.tasks.*
 import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.JavaVersion
@@ -26,10 +23,9 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
-import java.util.*
 import proguard.gradle.ProGuardTask
 import java.io.File
-import kotlin.apply
+import java.util.*
 
 /**
  * A gradle plugin which applies shared gradle logic to all the modules.
@@ -306,33 +302,6 @@ class NodePlugin : Plugin<Project> {
                             afterEvaluate {
                                 withType<MavenPublication>().configureEach {
                                     artifactId = extension.getArtifactId(project)
-                                }
-                            }
-                            withType<MavenPublication>().configureEach {
-                                artifactId = extension.getArtifactId(project)
-                                pom {
-                                    name = "NodePlugin"
-                                    description = "A Gradle plugin for NodeEngine projects"
-                                    inceptionYear = "2026"
-                                    url = "https://github.com/NodeEngineHub/NodePlugin"
-                                    licenses {
-                                        license {
-                                            name = "GNU Lesser General Public License v3.0"
-                                            url = "https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE"
-                                        }
-                                    }
-                                    developers {
-                                        developer {
-                                            id = "fxmorin"
-                                            name = "FX Morin"
-                                            url = "https://github.com/FxMorin/"
-                                        }
-                                    }
-                                    scm {
-                                        url = "https://github.com/NodeEngineHub/NodePlugin/"
-                                        connection = "scm:git:git://github.com/NodeEngineHub/NodePlugin.git"
-                                        developerConnection = "scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git"
-                                    }
                                 }
                             }
                         }
