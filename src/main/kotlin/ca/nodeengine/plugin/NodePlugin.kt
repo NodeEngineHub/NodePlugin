@@ -47,7 +47,7 @@ class NodePlugin : Plugin<Project> {
             annotatedPackages.convention("ca.nodeengine")
             javaVersion.convention(25)
             apiProjectSuffix.convention("api")
-            excludedIncludedBuilds.convention(listOf("NodePlugin"))
+            excludedIncludedBuilds.convention(listOf("node-plugin"))
             useProguard.convention(true)
             publishApi.convention(true)
             publishAll.convention(false)

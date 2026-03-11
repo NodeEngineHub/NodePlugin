@@ -76,10 +76,15 @@ publishing {
                 description = "A Gradle plugin for NodeEngine projects"
                 inceptionYear = "2026"
                 url = "https://github.com/NodeEngineHub/NodePlugin"
+                organization {
+                    name = "NodeEngine"
+                    url = "https://NodeEngine.ca/"
+                }
                 licenses {
                     license {
-                        name = "GNU Lesser General Public License v3.0"
+                        name = "LGPL-3.0-only"
                         url = "https://github.com/NodeEngineHub/NodePlugin/blob/master/LICENSE"
+                        distribution = "repo"
                     }
                 }
                 developers {
@@ -93,6 +98,10 @@ publishing {
                     url = "https://github.com/NodeEngineHub/NodePlugin/"
                     connection = "scm:git:git://github.com/NodeEngineHub/NodePlugin.git"
                     developerConnection = "scm:git:ssh://git@github.com/NodeEngineHub/NodePlugin.git"
+                }
+                issueManagement {
+                    system = "GitHub"
+                    url = "https://github.com/NodeEngineHub/NodePlugin/issues"
                 }
             }
         }

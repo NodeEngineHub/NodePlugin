@@ -50,7 +50,7 @@ abstract class NodePluginExtension {
 
     /**
      * List of plugin IDs to exclude from copying Gradle files in copyGradleToIncludedBuilds.<br>
-     * Default: `["NodePlugin"]`
+     * Default: `["node-plugin"]`
      */
     abstract val excludedIncludedBuilds: ListProperty<String>
 
