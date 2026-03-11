@@ -38,6 +38,7 @@ dependencies {
     implementation("net.ltgt.gradle:gradle-errorprone-plugin:4.3.0")
     implementation("com.uber.nullaway:nullaway-annotations:$nullawayVersion")
     implementation("com.guardsquare:proguard-gradle:7.8.1")
+    implementation("org.jreleaser:org.jreleaser.gradle.plugin:1.23.0")
     api("org.jspecify:jspecify:1.0.0")
 }
 
@@ -131,7 +132,7 @@ jreleaser {
     }
     release {
         github {
-            name = "${rootProject.name}"
+            name = rootProject.name
         }
     }
     if (!providers.environmentVariable("CI").isPresent) {

@@ -23,6 +23,8 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.*
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.jreleaser.gradle.plugin.JReleaserExtension
+import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import proguard.gradle.ProGuardTask
 import java.io.File
 import java.util.*
@@ -76,7 +78,6 @@ class NodePlugin : Plugin<Project> {
             // Core plugins and repos
             project.pluginManager.apply("idea")
             project.pluginManager.apply("java-library")
-            project.pluginManager.apply("maven-publish")
             project.pluginManager.apply("net.ltgt.errorprone")
 
             project.afterEvaluate {
@@ -292,6 +293,8 @@ class NodePlugin : Plugin<Project> {
 
                 // Publishing configuration
                 if (extension.shouldPublish.get()) {
+                    project.pluginManager.apply("maven-publish")
+                    project.pluginManager.apply("org.jreleaser")
                     project.extensions.configure<PublishingExtension> {
                         repositories {
                             maven {
@@ -305,6 +308,34 @@ class NodePlugin : Plugin<Project> {
                                 }
                             }
                         }
+                    }
+
+                    project.extensions.configure<JReleaserExtension> {
+                        release {
+                            github {
+                                enabled = true
+                            }
+                        }
+                        if (!project.providers.environmentVariable("CI").isPresent) {
+                            environment {
+                                variables = File(System.getProperty("user.home") + "/.jreleaser/config.toml")
+                            }
+                        }
+                    }
+
+                    val createJReleaserOutputDir by tasks.registering {
+                        val outputDir = layout.buildDirectory.dir("jreleaser")
+                        outputs.dir(outputDir)
+                        doLast {
+                            val file = outputDir.get().asFile
+                            if (!file.exists()) {
+                                file.mkdirs()
+                            }
+                        }
+                    }
+
+                    tasks.withType<JReleaserDeployTask>().configureEach {
+                        dependsOn(createJReleaserOutputDir)
                     }
                 }
             }
