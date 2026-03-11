@@ -71,4 +71,10 @@ abstract class NodePluginExtension {
      * Default: `false`
      */
     abstract val dryRun: Property<Boolean>
+
+    /**
+     * If the root project should be included as a node project.<br>
+     * Default: `false`
+     */
+    abstract val includeRootProject: Property<Boolean>
 }
