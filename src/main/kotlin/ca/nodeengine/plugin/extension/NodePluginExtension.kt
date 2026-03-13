@@ -67,6 +67,18 @@ abstract class NodePluginExtension {
     abstract val publishAll: Property<Boolean>
 
     /**
+     * If this project should publish its modules to Sonatype.<br>
+     * Default: `false`
+     */
+    abstract val publishSonatype: Property<Boolean>
+
+    /**
+     * Sets the project vendor within the JReleaser project<br>
+     * Default: ``
+     */
+    abstract val vendor: Property<String>
+
+    /**
      * If deployModules should use dryRun.<br>
      * Default: `false`
      */

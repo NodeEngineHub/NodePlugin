@@ -31,6 +31,7 @@ import org.jreleaser.gradle.plugin.JReleaserExtension
 import org.jreleaser.gradle.plugin.tasks.JReleaserDeployTask
 import proguard.gradle.ProGuardTask
 import java.io.File
+import java.time.LocalDate
 import java.util.*
 import kotlin.collections.forEach
 
@@ -52,6 +53,8 @@ class NodePlugin : Plugin<Project> {
             useProguard.convention(true)
             publishApi.convention(true)
             publishAll.convention(false)
+            publishSonatype.convention(false)
+            vendor.convention("")
             dryRun.convention(false)
             includeRootProject.convention(false)
         }
@@ -358,19 +361,29 @@ class NodePlugin : Plugin<Project> {
                 project.extensions.configure<JReleaserExtension> {
                     project {
                         setJReleaserDefaultsFromPublishing(project, this)
+                        vendor = rootExtension.vendor
+                        copyright = "Copyright (c) ${LocalDate.now().year} ${rootExtension.vendor.get()}".trimEnd()
                     }
                     signing {
                         active = org.jreleaser.model.Active.ALWAYS
                         armored = true
                     }
-                    release {
-                        github {
-                            enabled = true
-                        }
-                    }
                     if (!project.providers.environmentVariable("CI").isPresent) {
                         environment {
                             variables = File(System.getProperty("user.home") + "/.jreleaser/config.toml")
+                        }
+                    }
+                    if (rootExtension.publishSonatype.get()) {
+                        deploy {
+                            maven {
+                                mavenCentral {
+                                    register("sonatype") {
+                                        active = org.jreleaser.model.Active.ALWAYS
+                                        url = "https://central.sonatype.com/api/v1/publisher"
+                                        stagingRepository("build/staging-deploy")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -407,12 +420,14 @@ private fun setJReleaserDefaultsFromPublishing(project: Project,
             }
             val pom = pub.pom
             if (pom is MavenPomInternal) {
-                val license = pom.licenses.first()
-                if (!jreleaserProject.license.isPresent) {
-                    jreleaserProject.license.convention(license.name)
-                }
-                if (!jreleaserProject.links.license.isPresent) {
-                    jreleaserProject.links.license.convention(license.url)
+                if (pom.licenses.isNotEmpty()) {
+                    val license = pom.licenses.first()
+                    if (!jreleaserProject.license.isPresent) {
+                        jreleaserProject.license.convention(license.name)
+                    }
+                    if (!jreleaserProject.links.license.isPresent) {
+                        jreleaserProject.links.license.convention(license.url)
+                    }
                 }
                 if (!jreleaserProject.authors.isPresent) {
                     jreleaserProject.authors.convention(project.provider { pom.developers
