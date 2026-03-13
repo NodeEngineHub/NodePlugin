@@ -5,7 +5,7 @@ plugins {
     `kotlin-dsl`
     `java-gradle-plugin`
     `version-catalog`
-    id("io.freefair.lombok") version "8.4"
+    id("io.freefair.lombok") version "9.2.0"
     `maven-publish`
     id("org.jreleaser") version "1.23.0"
     id("com.gradle.plugin-publish") version "2.0.0"
@@ -34,7 +34,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:1.9.22")
 
-    implementation("io.freefair.lombok:io.freefair.lombok.gradle.plugin:9.0.0-rc2")
+    implementation("io.freefair.lombok:io.freefair.lombok.gradle.plugin:9.2.0")
     implementation("net.ltgt.gradle:gradle-errorprone-plugin:4.3.0")
     implementation("com.uber.nullaway:nullaway-annotations:$nullawayVersion")
     implementation("com.guardsquare:proguard-gradle:7.8.1")
