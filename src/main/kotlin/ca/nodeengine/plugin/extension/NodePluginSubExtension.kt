@@ -13,6 +13,18 @@ import kotlin.text.replace
 abstract class NodePluginSubExtension {
 
     /**
+     * The display name of this sub extension. Used when publishing.<br>
+     * Default: `project.name`
+     */
+    abstract val displayName: Property<String>
+
+    /**
+     * The description of this sub extension. Used when publishing.<br>
+     * Default: `project.description`
+     */
+    abstract val description: Property<String>
+
+    /**
      * The artifact id of the root parent.
      */
     abstract val rootArtifactId: Property<String>

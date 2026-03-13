@@ -15,6 +15,7 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.ivy.IvyPublication
 import org.gradle.api.publish.ivy.internal.publication.IvyModuleDescriptorSpecInternal
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.Copy
@@ -54,6 +55,7 @@ class NodePlugin : Plugin<Project> {
             publishApi.convention(true)
             publishAll.convention(false)
             publishSonatype.convention(false)
+            propagatePublishing.convention(true)
             vendor.convention("")
             dryRun.convention(false)
             includeRootProject.convention(false)
@@ -64,6 +66,8 @@ class NodePlugin : Plugin<Project> {
         val apiSuffix = rootExtension.apiProjectSuffix.get()
         val isApi = target.name.endsWith(apiSuffix)
         return target.extensions.create<NodePluginSubExtension>("subNodePlugin").apply {
+            displayName.convention(target.name)
+            description.convention(target.description ?: "")
             rootArtifactId.convention(rootExtension.rootArtifactId)
             defaultArtifactId.convention(rootExtension.defaultArtifactId)
             includeSources.convention(true)
@@ -356,6 +360,28 @@ class NodePlugin : Plugin<Project> {
                             url = project.layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
                         }
                     }
+                    if (rootExtension.propagatePublishing.get() && project != root) {
+                        val rootPublishing = root.extensions.findByType<PublishingExtension>()
+                        val rootPubs = rootPublishing?.publications?.filterIsInstance<MavenPublication>()
+                        if (rootPubs != null && rootPubs.isNotEmpty()) {
+                            if (publications.isEmpty()) {
+                                publications.maybeCreate<MavenPublication>("maven")
+                            }
+                            publications.withType<MavenPublication>().all {
+                                val subPub = this
+                                val rootPub = rootPubs.find { it.name == subPub.name } ?: rootPubs.first()
+                                subPub.artifactId = extension.getArtifactId(project)
+                                project.components.findByName("java")?.let { javaComponent ->
+                                    try {
+                                        subPub.from(javaComponent)
+                                    } catch (_: Exception) {
+                                        // Component already added
+                                    }
+                                }
+                                configurePom(subPub.pom, rootPub.pom, extension)
+                            }
+                        }
+                    }
                 }
 
                 project.extensions.configure<JReleaserExtension> {
@@ -402,6 +428,62 @@ class NodePlugin : Plugin<Project> {
                 tasks.withType<JReleaserDeployTask>().configureEach {
                     dependsOn(createJReleaserOutputDir)
                     dependsOn(tasks.withType<PublishToMavenRepository>())
+                }
+            }
+        }
+    }
+}
+
+private fun configurePom(pom: MavenPom, rootPom: MavenPom, extension: NodePluginSubExtension) {
+    if (rootPom is MavenPomInternal) {
+        pom.apply {
+            name.set(extension.displayName)
+            description.set(extension.description)
+            url.set(rootPom.url)
+            inceptionYear.set(rootPom.inceptionYear)
+            rootPom.organization?.let { ro ->
+                organization {
+                    name.set(ro.name)
+                    url.set(ro.url)
+                }
+            }
+            rootPom.scm?.let { rs ->
+                scm {
+                    connection.set(rs.connection)
+                    developerConnection.set(rs.developerConnection)
+                    url.set(rs.url)
+                    tag.set(rs.tag)
+                }
+            }
+            rootPom.issueManagement?.let { ri ->
+                issueManagement {
+                    system.set(ri.system)
+                    url.set(ri.url)
+                }
+            }
+            licenses {
+                rootPom.licenses.forEach { rl ->
+                    license {
+                        name.set(rl.name)
+                        url.set(rl.url)
+                        distribution.set(rl.distribution)
+                        comments.set(rl.comments)
+                    }
+                }
+            }
+            developers {
+                rootPom.developers.forEach { rd ->
+                    developer {
+                        id.set(rd.id)
+                        name.set(rd.name)
+                        email.set(rd.email)
+                        url.set(rd.url)
+                        organization.set(rd.organization)
+                        organizationUrl.set(rd.organizationUrl)
+                        roles.set(rd.roles)
+                        timezone.set(rd.timezone)
+                        properties.set(rd.properties)
+                    }
                 }
             }
         }

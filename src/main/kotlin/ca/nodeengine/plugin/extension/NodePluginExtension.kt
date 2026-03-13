@@ -73,6 +73,12 @@ abstract class NodePluginExtension {
     abstract val publishSonatype: Property<Boolean>
 
     /**
+     * If publishing should propagate to subprojects.<br>
+     * Default: `true`
+     */
+    abstract val propagatePublishing: Property<Boolean>
+
+    /**
      * Sets the project vendor within the JReleaser project<br>
      * Default: ``
      */
