@@ -47,6 +47,7 @@ nodePlugin {
     // If the root project should be included as a node project. Default: false
     includeRootProject.set(false)
 }
+```
 
 ### Subproject Configuration (Kotlin DSL)
 
