@@ -37,7 +37,7 @@ dependencies {
     implementation("io.freefair.lombok:io.freefair.lombok.gradle.plugin:9.2.0")
     implementation("net.ltgt.gradle:gradle-errorprone-plugin:5.1.0")
     implementation("com.uber.nullaway:nullaway-annotations:$nullawayVersion")
-    implementation("com.guardsquare:proguard-gradle:7.8.1")
+    implementation("com.guardsquare:proguard-gradle:7.8.2")
     implementation("org.jreleaser:org.jreleaser.gradle.plugin:1.23.0")
     api("org.jspecify:jspecify:1.0.0")
 }
