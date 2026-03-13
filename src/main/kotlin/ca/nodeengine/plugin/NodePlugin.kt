@@ -353,13 +353,6 @@ class NodePlugin : Plugin<Project> {
                             url = project.layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
                         }
                     }
-                    publications {
-                        afterEvaluate {
-                            withType<MavenPublication>().configureEach {
-                                artifactId = extension.getArtifactId(project)
-                            }
-                        }
-                    }
                 }
 
                 project.extensions.configure<JReleaserExtension> {
