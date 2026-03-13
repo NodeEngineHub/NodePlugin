@@ -16,6 +16,7 @@ import org.gradle.api.publish.ivy.IvyPublication
 import org.gradle.api.publish.ivy.internal.publication.IvyModuleDescriptorSpecInternal
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.internal.publication.MavenPomInternal
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -394,6 +395,7 @@ class NodePlugin : Plugin<Project> {
 
                 tasks.withType<JReleaserDeployTask>().configureEach {
                     dependsOn(createJReleaserOutputDir)
+                    dependsOn(tasks.withType<PublishToMavenRepository>())
                 }
             }
         }

@@ -63,13 +63,6 @@ publishing {
         }
     }
     publications {
-        afterEvaluate {
-            withType<MavenPublication>().configureEach {
-                if (name == "pluginMaven") {
-                    artifactId = "node-plugin"
-                }
-            }
-        }
         withType<MavenPublication>().configureEach {
             pom {
                 name = "NodePlugin"
@@ -164,4 +157,5 @@ val createJReleaserOutputDir by tasks.registering {
 
 tasks.withType<JReleaserDeployTask>().configureEach {
     dependsOn(createJReleaserOutputDir)
+    dependsOn(tasks.withType<PublishToMavenRepository>())
 }
